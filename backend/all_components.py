@@ -37,18 +37,36 @@ def get_current_details(tickers):
         print(f"Error fetching data: {e}")
         return pd.DataFrame()
 
-def generate_all_data():
-    """Generate Excel file with all components data"""
+def generate_all_data(tickers=None):
+    """Generate Excel file with all components data in a single sheet"""
     try:
-        components = get_index_components()
         output = BytesIO()
+        all_data = pd.DataFrame()
         
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        if tickers:
+            # Use provided tickers
+            print("Processing custom tickers...")
+            df = get_current_details(tickers)
+            if not df.empty:
+                df['Index'] = 'Custom'
+                all_data = df
+        else:
+            # Use default index components
+            components = get_index_components()
             for index, symbols in components.items():
                 print(f"Processing {index}...")
                 df = get_current_details(symbols)
                 if not df.empty:
-                    df.to_excel(writer, sheet_name=index[:31], index=False)
+                    df['Index'] = index
+                    all_data = pd.concat([all_data, df], ignore_index=True)
+        
+        exit()
+        # Write all data to a single sheet
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            if not all_data.empty:
+                cols = ['Index', 'Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
+                all_data = all_data[cols]
+                all_data.to_excel(writer, sheet_name='All Components', index=False)
         
         output.seek(0)
         return output

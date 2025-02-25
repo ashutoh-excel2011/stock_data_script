@@ -8,15 +8,33 @@ from realtime_data import generate_realtime_data
 from historic_data import get_stock_data
 
 app = Flask(__name__)
+app.secret_key = "your_secret_key_here"
 
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
-@app.route('/download_all_data')
+@app.route('/download_all_data', methods=['GET', 'POST'])
 def download_all_data():
     try:
-        output = generate_all_data()
+        # Check if a file was uploaded
+        if request.method == 'POST' and 'file' in request.files:
+            uploaded_file = request.files['file']
+            
+            if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+                # Read tickers from uploaded file
+                df_tickers = pd.read_excel(uploaded_file)
+                if 'Ticker' not in df_tickers.columns:
+                    flash("Excel file must contain a 'Ticker' column")
+                    return redirect('/')
+                    
+                tickers = df_tickers['Ticker'].unique().tolist()
+                output = generate_all_data(tickers=tickers)
+            else:
+                output = generate_all_data()
+        else:
+            output = generate_all_data()
+
         if output:
             filename = f'all_tickers_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
             return send_file(
@@ -31,10 +49,27 @@ def download_all_data():
         flash(f"Error generating all tickers data: {str(e)}")
         return redirect('/')
     
-@app.route('/download_realtime_data')
+@app.route('/download_realtime_data', methods=['GET', 'POST'])
 def download_realtime_data():
     try:
-        output = generate_realtime_data()
+        # Check if a file was uploaded
+        if request.method == 'POST' and 'file' in request.files:
+            uploaded_file = request.files['file']
+            
+            if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+                # Read tickers from uploaded file
+                df_tickers = pd.read_excel(uploaded_file)
+                if 'Ticker' not in df_tickers.columns:
+                    flash("Excel file must contain a 'Ticker' column")
+                    return redirect('/')
+                    
+                tickers = df_tickers['Ticker'].unique().tolist()
+                output = generate_realtime_data(tickers=tickers)
+            else:
+                output = generate_realtime_data()
+        else:
+            output = generate_realtime_data()
+
         if output:
             filename = f'realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
             return send_file(

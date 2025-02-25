@@ -93,19 +93,35 @@
 
             <button type="submit" class="btn btn-primary">Download Stock Data</button>
         </form>
-        <div class="ticker all-ticker">
-            <form method="GET" action="/download_all_data">
-                <button type="submit" class="btn btn-success">
-                    Download All Tickers Data
-                </button>
-            </form>
+        <div class="card mb-4 mt-4">
+            <div class="card-header">All Tickers Data</div>
+            <div class="card-body">
+                <form action="{{ url_for('download_all_data') }}" method="post" enctype="multipart/form-data">
+                    <div class="form-group mb-3">
+                        <label for="all_data_file" class="form-label">Upload Custom Tickers (Optional):</label>
+                        <input class="form-control" type="file" id="all_data_file" name="file" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Download With Selected Tickers</button>
+                        <a href="{{ url_for('download_all_data') }}" class="btn btn-secondary">Download All Index Components</a>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="ticker realtime_data">
-            <form method="GET" action="/download_realtime_data">
-                <button type="submit" class="btn btn-success">
-                    Download Realtime Tickers Data
-                </button>
-            </form>
+        <div class="card mb-4">
+            <div class="card-header">Realtime Data</div>
+            <div class="card-body">
+                <form action="{{ url_for('download_realtime_data') }}" method="post" enctype="multipart/form-data">
+                    <div class="form-group mb-3">
+                        <label for="realtime_file" class="form-label">Upload Custom Tickers (Optional):</label>
+                        <input class="form-control" type="file" id="realtime_file" name="file" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Download With Selected Tickers</button>
+                        <a href="{{ url_for('download_realtime_data') }}" class="btn btn-secondary">Download All Index Components</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
