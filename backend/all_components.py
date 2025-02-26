@@ -60,7 +60,6 @@ def generate_all_data(tickers=None):
                     df['Index'] = index
                     all_data = pd.concat([all_data, df], ignore_index=True)
         
-        exit()
         # Write all data to a single sheet
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             if not all_data.empty:
