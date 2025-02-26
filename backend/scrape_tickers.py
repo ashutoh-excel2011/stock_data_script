@@ -8,16 +8,33 @@ def get_index_components():
         "Referer": "https://www.google.com",
     }
 
+    etf_codes = [
+            'SPY', 'SSO', 'SPXL', 'RSP', 'QQQ', 'QLD', 'TQQQ', 'DIA', 'WEBL', 'IWF',
+            'XLK', 'XLV', 'XLY', 'XLC', 'XLF', 'XLI', 'XLP', 'XLU', 'XLB', 'XLRE',
+            'XLE', 'MDY', 'SPMD', 'SH', 'SDS', 'SPXS', 'PSQ', 'QID', 'SQQQ', 'RWM',
+            'GLD', 'SLV', 'USO', 'UNG'
+        ]
+    
+    other_indices = [
+        'SPX', 'IXIC', 'DJI', 'N225', 'FTSE', 'FCHI', '^HSI', 'TA35.TA', '^IBEX'
+    ]
+    
     indices = {
         'SP500': 'https://www.slickcharts.com/sp500',
         'Nasdaq100': 'https://www.slickcharts.com/nasdaq100',
         'DowJones': 'https://www.slickcharts.com/dowjones',
+        'ETFs': etf_codes,
+        'Other': other_indices
     }
 
     components = {}
     
     for index, url in indices.items():
         try:
+            if index in ['ETFs', 'Other']:
+                components[index] = url
+                continue
+            
             response = requests.get(url, headers=headers)
             soup = BeautifulSoup(response.content, 'html.parser')
             table = soup.find('table', {'class': 'table table-hover table-borderless table-sm'})
