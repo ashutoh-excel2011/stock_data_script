@@ -17,6 +17,7 @@ def index():
 @app.route('/download_all_data', methods=['GET', 'POST'])
 def download_all_data():
     try:
+        index_ticker_map = {}
         # Check if a file was uploaded
         if request.method == 'POST' and 'file' in request.files:
             uploaded_file = request.files['file']
@@ -24,12 +25,13 @@ def download_all_data():
             if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
                 # Read tickers from uploaded file
                 df_tickers = pd.read_excel(uploaded_file)
-                if 'Ticker' not in df_tickers.columns:
-                    flash("Excel file must contain a 'Ticker' column")
+                if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+                    flash("Excel file must contain 'Ticker' and 'Index' columns")
                     return redirect('/')
                     
-                tickers = df_tickers['Ticker'].unique().tolist()
-                output = generate_all_data(tickers=tickers)
+                for index, ticker in df_tickers.groupby('Index'):
+                    index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+                output = generate_all_data(tickers=index_ticker_map)
             else:
                 output = generate_all_data()
         else:
@@ -52,6 +54,7 @@ def download_all_data():
 @app.route('/download_realtime_data', methods=['GET', 'POST'])
 def download_realtime_data():
     try:
+        index_ticker_map = {}
         # Check if a file was uploaded
         if request.method == 'POST' and 'file' in request.files:
             uploaded_file = request.files['file']
@@ -59,12 +62,13 @@ def download_realtime_data():
             if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
                 # Read tickers from uploaded file
                 df_tickers = pd.read_excel(uploaded_file)
-                if 'Ticker' not in df_tickers.columns:
-                    flash("Excel file must contain a 'Ticker' column")
+                if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+                    flash("Excel file must contain 'Ticker' and 'Index' columns")
                     return redirect('/')
                     
-                tickers = df_tickers['Ticker'].unique().tolist()
-                output = generate_realtime_data(tickers=tickers)
+                for index, ticker in df_tickers.groupby('Index'):
+                    index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+                output = generate_realtime_data(tickers=index_ticker_map)
             else:
                 output = generate_realtime_data()
         else:

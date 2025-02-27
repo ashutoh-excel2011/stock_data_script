@@ -40,11 +40,12 @@ def generate_realtime_data(tickers=None):
         
         if tickers:
             # Use provided tickers
-            print("Processing custom tickers...")
-            df = get_current_details(tickers)
-            if not df.empty:
-                df['Index'] = 'Custom'
-                all_data = df
+            for index, symbols in tickers.items():
+                print(f"Processing {index}...")
+                df = get_current_details(symbols)
+                if not df.empty:
+                    df['Index'] = index
+                    all_data = pd.concat([all_data, df], ignore_index=True)
         else:
             # Use default index components
             components = get_index_components()
