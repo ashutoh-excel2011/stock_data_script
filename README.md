@@ -13,12 +13,13 @@ cd stock_data_script
 ### 2. Create a virtual environment (optional but recommended)
 ```sh
 python -m venv .venv
+(optional) Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 .venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
 ```sh
-pip install -r requirements.txt
+pip install -r requirement.txt
 ```
 
 ## Running the Backend
