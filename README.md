@@ -13,7 +13,7 @@ cd stock_data_script
 ### 2. Create a virtual environment (optional but recommended)
 ```sh
 python -m venv .venv
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
