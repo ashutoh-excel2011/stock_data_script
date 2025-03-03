@@ -1,14 +1,74 @@
-from flask import Flask, render_template, request, send_file, flash, redirect
+import os
+import time
+import pytz
 import pandas as pd
 from io import BytesIO
+from historic_data import get_stock_data
 from datetime import datetime, timedelta
-import time
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
-from historic_data import get_stock_data
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask import Flask, render_template, request, send_file, flash, redirect
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
+
+# Timezone for New York (Eastern Time)
+eastern = pytz.timezone('America/New_York')
+
+# Define folder structure
+BASE_DIR = "scheduled_data"
+ALL_DATA_DIR = os.path.join(BASE_DIR, "all_data")
+REALTIME_DATA_DIR = os.path.join(BASE_DIR, "realtime_data")
+
+# Ensure directories exist
+os.makedirs(ALL_DATA_DIR, exist_ok=True)
+os.makedirs(REALTIME_DATA_DIR, exist_ok=True)
+
+
+# Function to generate and save the all data file
+def scheduled_download_all_data():
+    try:
+        print("Running scheduled task: Download All Data")
+        output = generate_all_data()
+        if output:
+            filename = f'scheduled_all_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            file_path = os.path.join(ALL_DATA_DIR, filename)
+            with open(file_path, 'wb') as f:
+                f.write(output.getvalue())
+            print(f"All tickers data saved as {filename}")
+        else:
+            print("Failed to generate all tickers data")
+    except Exception as e:
+        print(f"Error in scheduled task (Download All Data): {str(e)}")
+
+# Function to generate and save the real-time data file
+def scheduled_download_realtime_data():
+    try:
+        print("Running scheduled task: Download Real-time Data")
+        output = generate_realtime_data()
+        if output:
+            filename = f'scheduled_realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            file_path = os.path.join(REALTIME_DATA_DIR, filename)
+            with open(file_path, 'wb') as f:
+                f.write(output.getvalue())
+            print(f"Realtime data saved as {filename}")
+        else:
+            print("Failed to generate real-time data")
+    except Exception as e:
+        print(f"Error in scheduled task (Download Real-time Data): {str(e)}")
+
+# Set up scheduler
+scheduler = BackgroundScheduler()
+
+# Schedule 'download_all_data' at 12 PM EST
+scheduler.add_job(scheduled_download_all_data, 'cron', hour=12, minute=0, timezone=eastern)
+
+# Schedule 'download_realtime_data' every hour from 10 AM to 5 PM EST
+scheduler.add_job(scheduled_download_realtime_data, 'cron', hour='10-17', minute=0, timezone=eastern)
+
+# Start the scheduler
+scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
