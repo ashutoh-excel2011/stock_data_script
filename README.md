@@ -4,27 +4,13 @@ This project fetches real-time and historical stock market data using `yfinance`
 
 ## Installation
 
-### 1. Clone the repository
+### 1. Clone the repository at your selected location
 ```sh
 git clone https://github.com/ashutoh-excel2011/stock_data_script.git
 cd stock_data_script
 ```
 
-### 2. Create a virtual environment (optional but recommended)
+### 2. Run the "run_script"
 ```sh
-python -m venv .venv
-(optional) Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-.venv\Scripts\activate
-```
-
-### 3. Install dependencies
-```sh
-pip install -r requirement.txt
-```
-
-## Running the Backend
-Navigate to the backend folder and start the Flask server:
-```sh
-cd backend
-python app.py
+call run_script.bat
 ```
