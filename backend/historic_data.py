@@ -6,8 +6,11 @@ def get_stock_data(ticker, start_date, end_date):
     try:
         print(f"Fetching data for {ticker} from {start_date} to {end_date}...")
         
+        # Adjust end date using pandas date offset
+        end_date_adjusted = pd.to_datetime(end_date) + pd.DateOffset(days=1)
+        
         # Fetch data within the given date range
-        df = yf.download(ticker, start=start_date, end=end_date, group_by='ticker')
+        df = yf.download(ticker, start=start_date, end=end_date_adjusted, group_by='ticker')
         
         if df.empty:
             return None
