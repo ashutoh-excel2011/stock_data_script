@@ -26,7 +26,12 @@ def get_current_details(tickers):
             data['Ticker'] = tickers[0]
             data = data.drop(columns=['Volume'])
 
-        return data[data['Date'] == data['Date'].max()]
+        latest_data = data[data['Date'] == data['Date'].max()]
+        
+        # **Sort the DataFrame by Ticker**
+        latest_data = latest_data.sort_values(by=['Ticker']).reset_index(drop=True)
+        
+        return latest_data
 
     except Exception as e:
         print(f"Error fetching data: {e}")
