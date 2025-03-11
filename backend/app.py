@@ -9,6 +9,7 @@ from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, render_template, request, send_file, flash, redirect
+from pathlib import Path
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
@@ -17,14 +18,38 @@ app.secret_key = "your_secret_key_here"
 eastern = pytz.timezone('America/New_York')
 
 # Define folder structure
-BASE_DIR = "scheduled_data"
-ALL_DATA_DIR = os.path.join(BASE_DIR, "all_data")
-REALTIME_DATA_DIR = os.path.join(BASE_DIR, "realtime_data")
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
-# Ensure directories exist
-os.makedirs(ALL_DATA_DIR, exist_ok=True)
-os.makedirs(REALTIME_DATA_DIR, exist_ok=True)
+# ALL_DATA_DIR = os.path.join(BASE_DIR, 'data', 'all_data')
+# REALTIME_DATA_DIR = os.path.join(BASE_DIR, 'data', "realtime_data")
 
+# # Ensure directories exist
+# os.makedirs(ALL_DATA_DIR, exist_ok=True)
+# os.makedirs(REALTIME_DATA_DIR, exist_ok=True)
+
+
+# Define the base directory where the "stock-data" folder will be located
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'stock-data'
+
+# Define the full paths for the required folders
+SCHEDULED_DATA_DIR = BASE_DIR / 'scheduled-data'
+SCHEDULED_DAILY_DIR = SCHEDULED_DATA_DIR / 'daily'
+SCHEDULED_REALTIME_DIR = SCHEDULED_DATA_DIR / 'realtime'
+
+MANUAL_DATA_DIR = BASE_DIR / 'manual'
+MANUAL_DAILY_DIR = MANUAL_DATA_DIR / 'daily'
+MANUAL_REALTIME_DIR = MANUAL_DATA_DIR / 'realtime'
+MANUAL_HISTORIC_DIR = MANUAL_DATA_DIR / 'historic'
+
+# Create all the required directories if they don't exist
+SCHEDULED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+SCHEDULED_DAILY_DIR.mkdir(parents=True, exist_ok=True)
+SCHEDULED_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
+
+MANUAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_DAILY_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_HISTORIC_DIR.mkdir(parents=True, exist_ok=True)
 
 # Function to generate and save the all data file
 def scheduled_download_all_data():
@@ -33,7 +58,7 @@ def scheduled_download_all_data():
         output = generate_all_data()
         if output:
             filename = f'scheduled_all_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
-            file_path = os.path.join(ALL_DATA_DIR, filename)
+            file_path = os.path.join(SCHEDULED_DAILY_DIR, filename)
             with open(file_path, 'wb') as f:
                 f.write(output.getvalue())
             print(f"All tickers data saved as {filename}")
@@ -49,7 +74,7 @@ def scheduled_download_realtime_data():
         output = generate_realtime_data()
         if output:
             filename = f'scheduled_realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
-            file_path = os.path.join(REALTIME_DATA_DIR, filename)
+            file_path = os.path.join(SCHEDULED_REALTIME_DIR, filename)
             with open(file_path, 'wb') as f:
                 f.write(output.getvalue())
             print(f"Realtime data saved as {filename}")
@@ -99,12 +124,16 @@ def download_all_data():
 
         if output:
             filename = f'all_tickers_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
-            return send_file(
-                output,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                as_attachment=True,
-                download_name=filename
-            )
+            file_path = os.path.join(MANUAL_DAILY_DIR, filename)
+
+            # Save the generated data to the file path
+            with open(file_path, 'wb') as f:
+                f.write(output.getvalue())
+        
+            # Flash a success message and redirect to the desired page
+            flash(f"Data saved successfully.")
+            return redirect('/')
+        
         flash("Failed to generate all tickers data")
         return redirect('/')
     except Exception as e:
@@ -136,12 +165,16 @@ def download_realtime_data():
 
         if output:
             filename = f'realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
-            return send_file(
-                output,
-                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                as_attachment=True,
-                download_name=filename
-            )
+            file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
+
+            # Save the generated data to the file path
+            with open(file_path, 'wb') as f:
+                f.write(output.getvalue())
+        
+            # Flash a success message and redirect to the desired page
+            flash(f"Realtime data saved successfully.")
+            return redirect('/')
+        
         flash("Failed to generate realtime data")
         return redirect('/')
     except Exception as e:
@@ -206,12 +239,14 @@ def download():
         output.seek(0)
         filename = f'stock_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
         
-        return send_file(
-            output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=filename
-        )
+         # Save the generated file in MANUAL_HISTORIC_DIR
+        file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+        with open(file_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        # Flash success message and redirect
+        flash(f"File has been successfully saved as {filename} in the manual/historic folder.")
+        return redirect('/')
 
     except ValueError as ve:
         flash('Invalid input format. Please check your inputs.')
