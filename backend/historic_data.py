@@ -10,7 +10,7 @@ def get_stock_data(ticker, start_date, end_date):
         end_date_adjusted = pd.to_datetime(end_date) + pd.DateOffset(days=1)
         
         # Fetch data within the given date range
-        df = yf.download(ticker, start=start_date, end=end_date_adjusted, group_by='ticker')
+        df = yf.download(ticker, start=start_date, end=end_date_adjusted, group_by='ticker', auto_adjust=False)
         
         if df.empty:
             return None

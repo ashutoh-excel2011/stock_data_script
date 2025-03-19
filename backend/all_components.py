@@ -9,7 +9,7 @@ def get_current_details(tickers):
         if not tickers:
             return pd.DataFrame()
             
-        data = yf.download(tickers, period="1d", group_by="ticker")
+        data = yf.download(tickers, period="1d", group_by="ticker", auto_adjust=False)
        
         if data.empty:
             return pd.DataFrame()
@@ -64,7 +64,7 @@ def generate_all_data(tickers=None):
         # Write all data to a single sheet
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             if not all_data.empty:
-                cols = ['Index', 'Ticker', 'Date', 'Open', 'High', 'Low', 'Close']
+                cols = ['Index', 'Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
                 all_data = all_data[cols]
                 all_data.to_excel(writer, sheet_name='All Components', index=False)
         

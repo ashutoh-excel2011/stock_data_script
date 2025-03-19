@@ -87,7 +87,7 @@ def scheduled_download_realtime_data():
 scheduler = BackgroundScheduler()
 
 # Schedule 'download_all_data' at 12 PM EST
-scheduler.add_job(scheduled_download_all_data, 'cron', hour=12, minute=0, timezone=eastern)
+scheduler.add_job(scheduled_download_all_data, 'cron', hour=1, minute=0, timezone=eastern)
 
 # Schedule 'download_realtime_data' every hour from 10 AM to 5 PM EST
 scheduler.add_job(scheduled_download_realtime_data, 'cron', hour='10-17', minute=0, timezone=eastern)
