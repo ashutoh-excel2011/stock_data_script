@@ -7,6 +7,7 @@ from historic_data import get_stock_data
 from datetime import datetime, timedelta
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
+from specific_date import generate_specific_date_data
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, render_template, request, send_file, flash, redirect
 from pathlib import Path
@@ -57,7 +58,7 @@ def scheduled_download_all_data():
         print("Running scheduled task: Download All Data")
         output = generate_all_data()
         if output:
-            filename = f'scheduled_all_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            filename = f'scheduled_all_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
             file_path = os.path.join(SCHEDULED_DAILY_DIR, filename)
             with open(file_path, 'wb') as f:
                 f.write(output.getvalue())
@@ -73,7 +74,7 @@ def scheduled_download_realtime_data():
         print("Running scheduled task: Download Real-time Data")
         output = generate_realtime_data()
         if output:
-            filename = f'scheduled_realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            filename = f'scheduled_realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
             file_path = os.path.join(SCHEDULED_REALTIME_DIR, filename)
             with open(file_path, 'wb') as f:
                 f.write(output.getvalue())
@@ -123,7 +124,7 @@ def download_all_data():
             output = generate_all_data()
 
         if output:
-            filename = f'all_tickers_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            filename = f'all_tickers_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
             file_path = os.path.join(MANUAL_DAILY_DIR, filename)
 
             # Save the generated data to the file path
@@ -164,7 +165,7 @@ def download_realtime_data():
             output = generate_realtime_data()
 
         if output:
-            filename = f'realtime_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+            filename = f'realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
             file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
 
             # Save the generated data to the file path
@@ -179,6 +180,55 @@ def download_realtime_data():
         return redirect('/')
     except Exception as e:
         flash(f"Error generating realtime data: {str(e)}")
+        return redirect('/')
+    
+@app.route('/download_specific_date', methods=['GET', 'POST'])
+def download_specific_date():
+    try:
+        index_ticker_map = {}
+        # Check if it's a POST request
+        if request.method == 'POST' and 'specific_date' in request.form:
+            
+            specific_date = request.form['specific_date']
+
+            # Check if file was uploaded
+            if 'file' in request.files:
+                uploaded_file = request.files['file']
+                if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+                    # Read tickers from uploaded file
+                    df_tickers = pd.read_excel(uploaded_file)
+                    if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+                        flash("Excel file must contain 'Ticker' and 'Index' columns")
+                        return redirect('/')
+                        
+                    for index, ticker in df_tickers.groupby('Index'):
+                        index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+                    
+                    output = generate_specific_date_data(specific_date, tickers=index_ticker_map)
+                else:
+                    output = generate_specific_date_data(specific_date)
+            else:
+                output = generate_specific_date_data(specific_date)
+
+            if output:
+                # Generate filename and save file
+                filename = f'specific_date_data_{specific_date}_{time.strftime("%H%M%S")}.xlsx'
+                file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+                
+                with open(file_path, 'wb') as f:
+                    f.write(output.getvalue())
+                
+                flash("Data saved successfully.")
+                return redirect('/')
+            else:
+                flash("Failed to generate data for the specific date")
+                return redirect('/')
+        else:
+            flash("Please submit the form with a valid date")
+            return redirect('/')
+            
+    except Exception as e:
+        flash(f"Error processing request: {str(e)}")
         return redirect('/')
 
 @app.route('/download', methods=['POST'])
@@ -237,7 +287,7 @@ def download():
                     flash(f"No data found for {ticker} in the given date range")
 
         output.seek(0)
-        filename = f'stock_data_{time.strftime("%Y%m%d%H%M%S")}.xlsx'
+        filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
         
          # Save the generated file in MANUAL_HISTORIC_DIR
         file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
@@ -256,4 +306,4 @@ def download():
         return redirect('/')
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True)
