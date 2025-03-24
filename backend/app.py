@@ -18,17 +18,6 @@ app.secret_key = "your_secret_key_here"
 # Timezone for New York (Eastern Time)
 eastern = pytz.timezone('America/New_York')
 
-# Define folder structure
-# BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
-
-# ALL_DATA_DIR = os.path.join(BASE_DIR, 'data', 'all_data')
-# REALTIME_DATA_DIR = os.path.join(BASE_DIR, 'data', "realtime_data")
-
-# # Ensure directories exist
-# os.makedirs(ALL_DATA_DIR, exist_ok=True)
-# os.makedirs(REALTIME_DATA_DIR, exist_ok=True)
-
-
 # Define the base directory where the "stock-data" folder will be located
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'stock-data'
 
@@ -237,6 +226,7 @@ def download():
         # Get uploaded file
         uploaded_file = request.files['file']
         period_type = request.form['period_type']
+        export_format = request.form['export_format']
         
         # Validate file
         if uploaded_file.filename == '':
@@ -279,12 +269,28 @@ def download():
         # Create Excel file in memory
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            for ticker in tickers:
-                data = get_stock_data(ticker, start_date, end_date)
-                if data is not None and not data.empty:
-                    data.to_excel(writer, sheet_name=ticker[:31], index=False)
-                else:
-                    flash(f"No data found for {ticker} in the given date range")
+            if export_format == 'single':
+                # Combine all data into a single sheet
+                all_data = []
+                for ticker in tickers:
+                    data = get_stock_data(ticker, start_date, end_date)
+                    if data is not None and not data.empty:
+                        data['Ticker'] = ticker  # Add ticker column
+                        all_data.append(data)
+                    else:
+                        flash(f"No data found for {ticker} in the given date range")
+                
+                if all_data:
+                    combined_data = pd.concat(all_data, ignore_index=True)
+                    combined_data.to_excel(writer, sheet_name='Historic Data', index=False)
+            else:
+                # Multiple sheets - one per ticker
+                for ticker in tickers:
+                    data = get_stock_data(ticker, start_date, end_date)
+                    if data is not None and not data.empty:
+                        data.to_excel(writer, sheet_name=ticker[:31], index=False)
+                    else:
+                        flash(f"No data found for {ticker} in the given date range")
 
         output.seek(0)
         filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
@@ -295,7 +301,7 @@ def download():
             f.write(output.getvalue())
         
         # Flash success message and redirect
-        flash(f"File has been successfully saved as {filename} in the manual/historic folder.")
+        flash(f"File successfully saved.")
         return redirect('/')
 
     except ValueError as ve:

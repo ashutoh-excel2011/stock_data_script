@@ -38,8 +38,8 @@
 </head>
 <body>
     <div class="container">
-        <h2 class="mb-4">Stock Data Downloader</h2>
-        
+        <h2 class="mb-2 text-center">STOCK DATA DOWNLOADER</h2>
+        <hr class="mb-4 mx-auto w-100">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -53,52 +53,65 @@
 
         <form method="POST" action="/download" enctype="multipart/form-data">
             <div class="form-group">
-                <label for="file" class="form-label">Upload Excel File with Tickers:</label>
+                <label for="file" class="form-label"><strong>Upload Excel File with Tickers:</strong></label>
                 <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.xls" required>
                 <div class="form-text">
                     Excel file should contain a 'Index' and 'Ticker' column.
                 </div>
             </div>
-
             <div class="period-type-group">
-                <label class="form-label">Select Period Type:</label>
+                <label class="form-label"><strong>Export Format:</strong></label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="export_format" id="single_sheet" value="single" checked>
+                    <label class="form-check-label" for="single_sheet">Single Sheet</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="export_format" id="multiple_sheets" value="multiple">
+                    <label class="form-check-label" for="multiple_sheets">Multiple Sheets</label>
+                </div>
+            </div>
+            <div class="period-type-group">
+                <label class="form-label"><strong>Select Period Type:</strong></label>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="period_type" id="period_date" value="date" checked>
-                    <label class="form-check-label" for="period_date">Date Range</label>
+                    <label class="form-check-label" for="period_date">Date</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="period_type" id="period_weeks" value="weeks">
-                    <label class="form-check-label" for="period_weeks">Number of Weeks</label>
+                    <label class="form-check-label" for="period_weeks">Weekly</label>
                 </div>
             </div>
 
             <div class="period-input date active">
-                <div class="form-group">
-                    <label for="start_date" class="form-label">Start Date:</label>
-                    <input type="date" class="form-control" id="start_date" name="start_date">
-                </div>
-
-                <div class="form-group">
-                    <label for="end_date" class="form-label">End Date:</label>
-                    <input type="date" class="form-control" id="end_date" name="end_date">
+                <div class="form-group row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label"><strong>Start Date:</strong></label>
+                        <input type="date" class="form-control" id="start_date" name="start_date">
+                    </div>
+            
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label"><strong>End Date:</strong></label>
+                        <input type="date" class="form-control" id="end_date" name="end_date">
+                    </div>
                 </div>
             </div>
 
             <div class="period-input weeks">
                 <div class="form-group">
-                    <label for="weeks" class="form-label">Number of Weeks:</label>
+                    <label for="weeks" class="form-label"><strong>Number of Weeks:</strong></label>
                     <input type="number" class="form-control" id="weeks" name="weeks" min="1">
                 </div>
             </div>
-
-            <button type="submit" class="btn btn-primary">Download Stock Data</button>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Download Stock Data</button>
+            </div>
         </form>
         <div class="card mb-4 mt-4">
             <div class="card-header"><h4>All Tickers Data</h4></div>
             <div class="card-body">
                 <form action="{{ url_for('download_all_data') }}" method="post" enctype="multipart/form-data">
                     <div class="form-group mb-3">
-                        <label for="all_data_file" class="form-label">Upload Selected Tickers (Optional):</label>
+                        <label for="all_data_file" class="form-label"><strong>Upload Selected Tickers (Optional)</strong>:</label>
                         <input class="form-control" type="file" id="all_data_file" name="file" accept=".xlsx,.xls" required>
                     </div>
                     <div class="d-grid gap-2">
@@ -113,7 +126,7 @@
             <div class="card-body">
                 <form action="{{ url_for('download_realtime_data') }}" method="post" enctype="multipart/form-data">
                     <div class="form-group mb-3">
-                        <label for="realtime_file" class="form-label">Upload Selected Tickers (Optional):</label>
+                        <label for="realtime_file" class="form-label"><strong>Upload Selected Tickers (Optional)</strong></label>
                         <input class="form-control" type="file" id="realtime_file" name="file" accept=".xlsx,.xls" required>
                     </div>
                     <div class="d-grid gap-2">
@@ -134,11 +147,11 @@
                         </label>
                     </div>
                     <div class="form-group mb-3" id="file_upload_group">
-                        <label for="specific_date_file" class="form-label">Upload Selected Tickers:</label>
+                        <label for="specific_date_file" class="form-label"><strong>Upload Selected Tickers:</strong></label>
                         <input class="form-control" type="file" id="specific_date_file" name="file" accept=".xlsx,.xls">
                     </div>
                     <div class="form-group mb-3">
-                        <label for="specific_date" class="form-label">Select Date:</label>
+                        <label for="specific_date" class="form-label"><strong>Select Date:</strong></label>
                         <input type="date" class="form-control" id="specific_date" name="specific_date" required>
                     </div>
                     <div class="d-grid">
