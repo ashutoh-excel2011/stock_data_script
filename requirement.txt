@@ -5,4 +5,5 @@ requests
 beautifulsoup4
 openpyxl
 xlsxwriter
-apscheduler
+gunicorn
+google-cloud-storage

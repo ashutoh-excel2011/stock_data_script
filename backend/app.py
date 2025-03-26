@@ -1,56 +1,58 @@
 import os
 import time
-import pytz
 import pandas as pd
 from io import BytesIO
+from google.cloud import storage
 from historic_data import get_stock_data
 from datetime import datetime, timedelta
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
-from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask, render_template, request, send_file, flash, redirect
-from pathlib import Path
+from flask import Flask, render_template, request, flash, redirect
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here"
+app.secret_key = "sp500data1"
 
-# Timezone for New York (Eastern Time)
-eastern = pytz.timezone('America/New_York')
+# Set up Google Cloud Storage details
+GCS_BUCKET_NAME = "sp500data1"
 
-# Define the base directory where the "stock-data" folder will be located
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'stock-data'
+# Define GCS paths based on your structure
+GCS_SCHEDULED_DAILY_DIR = "Scripts/Script-market/Stocks-data/Scheduled/Daily/"
+GCS_SCHEDULED_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Scheduled/Realtime/"
 
-# Define the full paths for the required folders
-SCHEDULED_DATA_DIR = BASE_DIR / 'scheduled-data'
-SCHEDULED_DAILY_DIR = SCHEDULED_DATA_DIR / 'daily'
-SCHEDULED_REALTIME_DIR = SCHEDULED_DATA_DIR / 'realtime'
+GCS_MANUAL_DAILY_DIR = "Scripts/Script-market/Stocks-data/Manual/Daily/"
+GCS_MANUAL_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Manual/Realtime/"
+GCS_MANUAL_HISTORIC_DIR = "Scripts/Script-market/Stocks-data/Manual/Historic/"
 
-MANUAL_DATA_DIR = BASE_DIR / 'manual'
-MANUAL_DAILY_DIR = MANUAL_DATA_DIR / 'daily'
-MANUAL_REALTIME_DIR = MANUAL_DATA_DIR / 'realtime'
-MANUAL_HISTORIC_DIR = MANUAL_DATA_DIR / 'historic'
+# Initialize Google Cloud Storage client
+storage_client = storage.Client()
 
-# Create all the required directories if they don't exist
-SCHEDULED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-SCHEDULED_DAILY_DIR.mkdir(parents=True, exist_ok=True)
-SCHEDULED_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
+def upload_to_gcs(file_content, gcs_path):
+    """Upload file content (BytesIO) to Google Cloud Storage."""
+    try:
+        bucket = storage_client.bucket(GCS_BUCKET_NAME)
+        blob = bucket.blob(gcs_path)
 
-MANUAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
-MANUAL_DAILY_DIR.mkdir(parents=True, exist_ok=True)
-MANUAL_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
-MANUAL_HISTORIC_DIR.mkdir(parents=True, exist_ok=True)
-
+        # Upload file content
+        blob.upload_from_file(file_content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        
+        print(f"File uploaded to GCS: gs://{GCS_BUCKET_NAME}/{gcs_path}")
+    except Exception as e:
+        print(f"Error uploading file to GCS: {str(e)}")
+        
 # Function to generate and save the all data file
+@app.route('/run_scheduled_all_data', methods=['POST'])
 def scheduled_download_all_data():
     try:
         print("Running scheduled task: Download All Data")
         output = generate_all_data()
         if output:
             filename = f'scheduled_all_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(SCHEDULED_DAILY_DIR, filename)
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
+            gcs_path = GCS_SCHEDULED_DAILY_DIR + filename
+
+            # Upload to GCS
+            upload_to_gcs(output, gcs_path)
+            
             print(f"All tickers data saved as {filename}")
         else:
             print("Failed to generate all tickers data")
@@ -58,32 +60,23 @@ def scheduled_download_all_data():
         print(f"Error in scheduled task (Download All Data): {str(e)}")
 
 # Function to generate and save the real-time data file
+@app.route('/run_scheduled_realtime_data', methods=['POST'])
 def scheduled_download_realtime_data():
     try:
         print("Running scheduled task: Download Real-time Data")
         output = generate_realtime_data()
         if output:
             filename = f'scheduled_realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(SCHEDULED_REALTIME_DIR, filename)
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
+            gcs_path = GCS_SCHEDULED_REALTIME_DIR + filename
+
+            # Upload to GCS
+            upload_to_gcs(output, gcs_path)
+            
             print(f"Realtime data saved as {filename}")
         else:
             print("Failed to generate real-time data")
     except Exception as e:
         print(f"Error in scheduled task (Download Real-time Data): {str(e)}")
-
-# Set up scheduler
-scheduler = BackgroundScheduler()
-
-# Schedule 'download_all_data' at 12 PM EST
-scheduler.add_job(scheduled_download_all_data, 'cron', hour=1, minute=0, timezone=eastern)
-
-# Schedule 'download_realtime_data' every hour from 10 AM to 5 PM EST
-scheduler.add_job(scheduled_download_realtime_data, 'cron', hour='10-17', minute=0, timezone=eastern)
-
-# Start the scheduler
-scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
@@ -114,14 +107,12 @@ def download_all_data():
 
         if output:
             filename = f'all_tickers_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(MANUAL_DAILY_DIR, filename)
+            gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
-            # Save the generated data to the file path
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
+            # Upload to GCS
+            upload_to_gcs(output, gcs_path)
         
-            # Flash a success message and redirect to the desired page
-            flash(f"Data saved successfully.")
+            flash(f"Data saved successfully to GCS.")
             return redirect('/')
         
         flash("Failed to generate all tickers data")
@@ -155,11 +146,11 @@ def download_realtime_data():
 
         if output:
             filename = f'realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
+            # file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
+            gcs_path = GCS_MANUAL_REALTIME_DIR + filename
 
-            # Save the generated data to the file path
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
+            # Upload to GCS
+            upload_to_gcs(output, gcs_path)
         
             # Flash a success message and redirect to the desired page
             flash(f"Realtime data saved successfully.")
@@ -202,10 +193,12 @@ def download_specific_date():
             if output:
                 # Generate filename and save file
                 filename = f'specific_date_data_{specific_date}_{time.strftime("%H%M%S")}.xlsx'
-                file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+                # file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+                gcs_path = GCS_MANUAL_HISTORIC_DIR + filename
+
+                # Upload to GCS
+                upload_to_gcs(output, gcs_path)
                 
-                with open(file_path, 'wb') as f:
-                    f.write(output.getvalue())
                 
                 flash("Data saved successfully.")
                 return redirect('/')
@@ -295,10 +288,10 @@ def download():
         output.seek(0)
         filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
         
-         # Save the generated file in MANUAL_HISTORIC_DIR
-        file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
-        with open(file_path, 'wb') as f:
-            f.write(output.getvalue())
+        gcs_path = GCS_MANUAL_HISTORIC_DIR + filename
+
+        # Upload to GCS
+        upload_to_gcs(output, gcs_path)
         
         # Flash success message and redirect
         flash(f"File successfully saved.")
@@ -312,4 +305,5 @@ def download():
         return redirect('/')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)

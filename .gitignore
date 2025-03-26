@@ -6,6 +6,8 @@ __pycache__/
 *.so
 .Python
 env/
+.env/
+.dockerignore/
 venv/
 ENV/
 env.bak/
