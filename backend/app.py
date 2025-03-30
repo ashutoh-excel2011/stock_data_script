@@ -22,7 +22,8 @@ GCS_SCHEDULED_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Scheduled/Realti
 
 GCS_MANUAL_DAILY_DIR = "Scripts/Script-market/Stocks-data/Manual/Daily/"
 GCS_MANUAL_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Manual/Realtime/"
-GCS_MANUAL_HISTORIC_DIR = "Scripts/Script-market/Stocks-data/Manual/Historic/"
+GCS_MANUAL_HISTORIC_DIR_MULTI = "Scripts/Script-market/Stocks-data/Manual/Historic/Multiple-sheets/"
+GCS_MANUAL_HISTORIC_DIR_SINGLE = "Scripts/Script-market/Stocks-data/Manual/Historic/Single-sheet/"
 
 # Initialize Google Cloud Storage client
 storage_client = storage.Client()
@@ -193,8 +194,7 @@ def download_specific_date():
             if output:
                 # Generate filename and save file
                 filename = f'specific_date_data_{specific_date}_{time.strftime("%H%M%S")}.xlsx'
-                # file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
-                gcs_path = GCS_MANUAL_HISTORIC_DIR + filename
+                gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename
 
                 # Upload to GCS
                 upload_to_gcs(output, gcs_path)
@@ -288,7 +288,11 @@ def download():
         output.seek(0)
         filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
         
-        gcs_path = GCS_MANUAL_HISTORIC_DIR + filename
+        # Set GCS path based on export format
+        if export_format == 'single':
+            gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename
+        else:
+            gcs_path = GCS_MANUAL_HISTORIC_DIR_MULTI + filename
 
         # Upload to GCS
         upload_to_gcs(output, gcs_path)
@@ -297,9 +301,6 @@ def download():
         flash(f"File successfully saved.")
         return redirect('/')
 
-    except ValueError as ve:
-        flash('Invalid input format. Please check your inputs.')
-        return redirect('/')
     except Exception as e:
         flash(f'Error processing request: {str(e)}')
         return redirect('/')
