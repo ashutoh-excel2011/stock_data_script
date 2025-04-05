@@ -24,6 +24,7 @@ GCS_MANUAL_DAILY_DIR = "Scripts/Script-market/Stocks-data/Manual/Daily/"
 GCS_MANUAL_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Manual/Realtime/"
 GCS_MANUAL_HISTORIC_DIR_MULTI = "Scripts/Script-market/Stocks-data/Manual/Historic/Multiple-sheets/"
 GCS_MANUAL_HISTORIC_DIR_SINGLE = "Scripts/Script-market/Stocks-data/Manual/Historic/Single-sheet/"
+GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "Scripts/Script-market/Stocks-data/Manual/Historic/Specific-date/"
 
 # Initialize Google Cloud Storage client
 storage_client = storage.Client()
@@ -107,7 +108,7 @@ def download_all_data():
             output = generate_all_data()
 
         if output:
-            filename = f'all_tickers_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'Market data-All data-singlesheet-manual-{time.strftime("%d%m%y")}.xlsx'
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
             # Upload to GCS
@@ -146,7 +147,7 @@ def download_realtime_data():
             output = generate_realtime_data()
 
         if output:
-            filename = f'realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'Market data-Realtime-singlesheet-manual-{time.strftime("%d%m%y")}.xlsx'
             # file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
             gcs_path = GCS_MANUAL_REALTIME_DIR + filename
 
@@ -193,8 +194,8 @@ def download_specific_date():
 
             if output:
                 # Generate filename and save file
-                filename = f'specific_date_data_{specific_date}_{time.strftime("%H%M%S")}.xlsx'
-                gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename
+                filename = f'Market data-specific-date-singlesheet-manual-{time.strftime("%d%m%y")}-{specific_date}.xlsx'
+                gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
 
                 # Upload to GCS
                 upload_to_gcs(output, gcs_path)
@@ -263,6 +264,7 @@ def download():
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             if export_format == 'single':
+                sheet_type = 'singlesheet'
                 # Combine all data into a single sheet
                 all_data = []
                 for ticker in tickers:
@@ -278,6 +280,7 @@ def download():
                     combined_data.to_excel(writer, sheet_name='Historic Data', index=False)
             else:
                 # Multiple sheets - one per ticker
+                sheet_type = 'multisheet'
                 for ticker in tickers:
                     data = get_stock_data(ticker, start_date, end_date)
                     if data is not None and not data.empty:
@@ -286,7 +289,7 @@ def download():
                         flash(f"No data found for {ticker} in the given date range")
 
         output.seek(0)
-        filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+        filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
         
         # Set GCS path based on export format
         if export_format == 'single':

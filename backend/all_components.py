@@ -9,7 +9,7 @@ def get_current_details(tickers):
         if not tickers:
             return pd.DataFrame()
             
-        data = yf.download(tickers, period="1d", group_by="ticker", auto_adjust=False)
+        data = yf.download(tickers, period="1d", interval="60m", group_by="ticker", auto_adjust=False)
        
         if data.empty:
             return pd.DataFrame()
@@ -29,7 +29,7 @@ def get_current_details(tickers):
         latest_data = data[data['Date'] == data['Date'].max()]
         
         # **Sort the DataFrame by Ticker**
-        latest_data = latest_data.sort_values(by=['Ticker']).reset_index(drop=True)
+        latest_data = latest_data.sort_values(by=['Ticker']).groupby('Ticker').tail(1).reset_index(drop=True)
         
         return latest_data
 
