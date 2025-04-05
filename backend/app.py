@@ -22,7 +22,7 @@ eastern = pytz.timezone('America/New_York')
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / 'stock-data'
 
 # Define the full paths for the required folders
-SCHEDULED_DATA_DIR = BASE_DIR / 'scheduled-data'
+SCHEDULED_DATA_DIR = BASE_DIR / 'scheduled'
 SCHEDULED_DAILY_DIR = SCHEDULED_DATA_DIR / 'daily'
 SCHEDULED_REALTIME_DIR = SCHEDULED_DATA_DIR / 'realtime'
 
@@ -30,6 +30,9 @@ MANUAL_DATA_DIR = BASE_DIR / 'manual'
 MANUAL_DAILY_DIR = MANUAL_DATA_DIR / 'daily'
 MANUAL_REALTIME_DIR = MANUAL_DATA_DIR / 'realtime'
 MANUAL_HISTORIC_DIR = MANUAL_DATA_DIR / 'historic'
+MANUAL_HISTORIC_SINGLE_DIR = MANUAL_HISTORIC_DIR / 'Single-sheet'
+MANUAL_HISTORIC_MULTIPLE_DIR = MANUAL_HISTORIC_DIR / 'Multiple-sheet'
+MANUAL_HISTORIC_SPECIFIC_DIR = MANUAL_HISTORIC_DIR / 'Specific-sheet'
 
 # Create all the required directories if they don't exist
 SCHEDULED_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -40,50 +43,53 @@ MANUAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_DAILY_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_HISTORIC_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_HISTORIC_SINGLE_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_HISTORIC_MULTIPLE_DIR.mkdir(parents=True, exist_ok=True)
+MANUAL_HISTORIC_SPECIFIC_DIR.mkdir(parents=True, exist_ok=True)
 
 # Function to generate and save the all data file
-def scheduled_download_all_data():
-    try:
-        print("Running scheduled task: Download All Data")
-        output = generate_all_data()
-        if output:
-            filename = f'scheduled_all_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(SCHEDULED_DAILY_DIR, filename)
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
-            print(f"All tickers data saved as {filename}")
-        else:
-            print("Failed to generate all tickers data")
-    except Exception as e:
-        print(f"Error in scheduled task (Download All Data): {str(e)}")
+# def scheduled_download_all_data():
+#     try:
+#         print("Running scheduled task: Download All Data")
+#         output = generate_all_data()
+#         if output:
+#             filename = f'scheduled_all_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+#             file_path = os.path.join(SCHEDULED_DAILY_DIR, filename)
+#             with open(file_path, 'wb') as f:
+#                 f.write(output.getvalue())
+#             print(f"All tickers data saved as {filename}")
+#         else:
+#             print("Failed to generate all tickers data")
+#     except Exception as e:
+#         print(f"Error in scheduled task (Download All Data): {str(e)}")
 
-# Function to generate and save the real-time data file
-def scheduled_download_realtime_data():
-    try:
-        print("Running scheduled task: Download Real-time Data")
-        output = generate_realtime_data()
-        if output:
-            filename = f'scheduled_realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-            file_path = os.path.join(SCHEDULED_REALTIME_DIR, filename)
-            with open(file_path, 'wb') as f:
-                f.write(output.getvalue())
-            print(f"Realtime data saved as {filename}")
-        else:
-            print("Failed to generate real-time data")
-    except Exception as e:
-        print(f"Error in scheduled task (Download Real-time Data): {str(e)}")
+# # Function to generate and save the real-time data file
+# def scheduled_download_realtime_data():
+#     try:
+#         print("Running scheduled task: Download Real-time Data")
+#         output = generate_realtime_data()
+#         if output:
+#             filename = f'scheduled_realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+#             file_path = os.path.join(SCHEDULED_REALTIME_DIR, filename)
+#             with open(file_path, 'wb') as f:
+#                 f.write(output.getvalue())
+#             print(f"Realtime data saved as {filename}")
+#         else:
+#             print("Failed to generate real-time data")
+#     except Exception as e:
+#         print(f"Error in scheduled task (Download Real-time Data): {str(e)}")
 
-# Set up scheduler
-scheduler = BackgroundScheduler()
+# # Set up scheduler
+# scheduler = BackgroundScheduler()
 
-# Schedule 'download_all_data' at 12 PM EST
-scheduler.add_job(scheduled_download_all_data, 'cron', hour=1, minute=0, timezone=eastern)
+# # Schedule 'download_all_data' at 12 PM EST
+# scheduler.add_job(scheduled_download_all_data, 'cron', hour=1, minute=0, timezone=eastern)
 
-# Schedule 'download_realtime_data' every hour from 10 AM to 5 PM EST
-scheduler.add_job(scheduled_download_realtime_data, 'cron', hour='10-17', minute=0, timezone=eastern)
+# # Schedule 'download_realtime_data' every hour from 10 AM to 5 PM EST
+# scheduler.add_job(scheduled_download_realtime_data, 'cron', hour='10-17', minute=0, timezone=eastern)
 
-# Start the scheduler
-scheduler.start()
+# # Start the scheduler
+# scheduler.start()
 
 @app.route('/', methods=['GET'])
 def index():
@@ -113,7 +119,7 @@ def download_all_data():
             output = generate_all_data()
 
         if output:
-            filename = f'all_tickers_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'Market data-All data-singlesheet-manual-{time.strftime("%d%m%y_%H%M%S")}.xlsx'
             file_path = os.path.join(MANUAL_DAILY_DIR, filename)
 
             # Save the generated data to the file path
@@ -154,7 +160,7 @@ def download_realtime_data():
             output = generate_realtime_data()
 
         if output:
-            filename = f'realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'Market data-Realtime-singlesheet-manual-{time.strftime("%d%m%y_%H%M%S")}.xlsx'
             file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
 
             # Save the generated data to the file path
@@ -201,8 +207,8 @@ def download_specific_date():
 
             if output:
                 # Generate filename and save file
-                filename = f'specific_date_data_{specific_date}_{time.strftime("%H%M%S")}.xlsx'
-                file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+                filename = f'Market data-specific-date-singlesheet-manual-{time.strftime("%d%m%y")}-{specific_date}.xlsx'
+                file_path = os.path.join(MANUAL_HISTORIC_SPECIFIC_DIR, filename)
                 
                 with open(file_path, 'wb') as f:
                     f.write(output.getvalue())
@@ -270,6 +276,7 @@ def download():
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             if export_format == 'single':
+                sheet_type = 'singlesheet'
                 # Combine all data into a single sheet
                 all_data = []
                 for ticker in tickers:
@@ -285,6 +292,7 @@ def download():
                     combined_data.to_excel(writer, sheet_name='Historic Data', index=False)
             else:
                 # Multiple sheets - one per ticker
+                sheet_type = 'multisheet'
                 for ticker in tickers:
                     data = get_stock_data(ticker, start_date, end_date)
                     if data is not None and not data.empty:
@@ -293,10 +301,14 @@ def download():
                         flash(f"No data found for {ticker} in the given date range")
 
         output.seek(0)
-        filename = f'stock_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+        filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
         
-         # Save the generated file in MANUAL_HISTORIC_DIR
-        file_path = os.path.join(MANUAL_HISTORIC_DIR, filename)
+        # Replace the file_path line in download route with:
+        if export_format == 'single':
+            file_path = os.path.join(MANUAL_HISTORIC_SINGLE_DIR, filename)
+        else:
+            file_path = os.path.join(MANUAL_HISTORIC_MULTIPLE_DIR, filename)
+            
         with open(file_path, 'wb') as f:
             f.write(output.getvalue())
         

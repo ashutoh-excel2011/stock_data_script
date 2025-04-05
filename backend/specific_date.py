@@ -8,16 +8,17 @@ def get_specific_date_data(tickers, specific_date):
     try:
         if not tickers:
             return pd.DataFrame()
-            
-        # Add one day to end_date to ensure we get the specific date
-        end_date = pd.to_datetime(specific_date) + pd.Timedelta(days=1)
+
+        # Define start and end for the date range
         start_date = pd.to_datetime(specific_date)
-        
-        data = yf.download(tickers, start=start_date, end=end_date, group_by="ticker", auto_adjust=False)
-        
+        end_date = start_date + pd.Timedelta(days=1)
+
+        data = yf.download(tickers, start=start_date, end=end_date, interval="60m", group_by="ticker", auto_adjust=False)
+
         if data.empty:
             return pd.DataFrame()
 
+        # Ensure datetime is not timezone-aware
         data.index = data.index.tz_localize(None)
         
         if isinstance(data.columns, pd.MultiIndex):
@@ -32,10 +33,10 @@ def get_specific_date_data(tickers, specific_date):
             
         # Filter for specific date only
         specific_data = data[data['Date'].dt.date == pd.to_datetime(specific_date).date()]
-        
-        # Sort the DataFrame by Ticker
-        specific_data = specific_data.sort_values(by=['Ticker']).reset_index(drop=True)
-        
+
+        # Get the latest available data for each ticker
+        specific_data = specific_data.sort_values(['Ticker', 'Date']).groupby('Ticker').tail(1).reset_index(drop=True)
+
         return specific_data
 
     except Exception as e:
