@@ -18,4 +18,4 @@ WORKDIR /app/backend
 EXPOSE 8080
 
 # Run the application
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "--timeout", "3600", "app:app"]
