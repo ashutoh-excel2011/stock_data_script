@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
+from scrape_tickers import generate_index_name
 from flask import Flask, render_template, request, flash, redirect
 
 app = Flask(__name__)
@@ -25,6 +26,7 @@ GCS_MANUAL_REALTIME_DIR = "Scripts/Script-market/Stocks-data/Manual/Realtime/"
 GCS_MANUAL_HISTORIC_DIR_MULTI = "Scripts/Script-market/Stocks-data/Manual/Historic/Multiple-sheets/"
 GCS_MANUAL_HISTORIC_DIR_SINGLE = "Scripts/Script-market/Stocks-data/Manual/Historic/Single-sheet/"
 GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "Scripts/Script-market/Stocks-data/Manual/Historic/Specific-date/"
+GCS_INDEX_COMPONENTS = "Scripts/Script-market/Template/Index-components"
 
 # Initialize Google Cloud Storage client
 storage_client = storage.Client()
@@ -311,6 +313,23 @@ def download():
 
     except Exception as e:
         flash(f'Error processing request: {str(e)}')
+        return redirect('/')
+
+@app.route('/download-index-components')
+def download_index_components():
+    try:
+        output = generate_index_name()
+        filename = f'index_components_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+        file_path = os.path.join(GCS_INDEX_COMPONENTS, filename)
+        
+        # Save the generated data to the file path
+        with open(file_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        flash("Index components data saved successfully.")
+        return redirect('/')
+    except Exception as e:
+        flash(f"Error saving index components data: {str(e)}")
         return redirect('/')
 
 if __name__ == '__main__':
