@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
+from scrape_tickers import generate_index_name
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, render_template, request, send_file, flash, redirect
 from pathlib import Path
@@ -27,6 +28,7 @@ SCHEDULED_DAILY_DIR = SCHEDULED_DATA_DIR / 'daily'
 SCHEDULED_REALTIME_DIR = SCHEDULED_DATA_DIR / 'realtime'
 
 MANUAL_DATA_DIR = BASE_DIR / 'manual'
+INDEX_COMPONENTS = BASE_DIR / 'index_components'
 MANUAL_DAILY_DIR = MANUAL_DATA_DIR / 'daily'
 MANUAL_REALTIME_DIR = MANUAL_DATA_DIR / 'realtime'
 MANUAL_HISTORIC_DIR = MANUAL_DATA_DIR / 'historic'
@@ -43,6 +45,7 @@ MANUAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_DAILY_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_REALTIME_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_HISTORIC_DIR.mkdir(parents=True, exist_ok=True)
+INDEX_COMPONENTS.mkdir(parents=True, exist_ok=True)
 MANUAL_HISTORIC_SINGLE_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_HISTORIC_MULTIPLE_DIR.mkdir(parents=True, exist_ok=True)
 MANUAL_HISTORIC_SPECIFIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -328,5 +331,22 @@ def download():
         flash(f'Error processing request: {str(e)}')
         return redirect('/')
 
+@app.route('/download-index-components')
+def download_index_components():
+    try:
+        output = generate_index_name()
+        filename = f'index_components_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+        file_path = os.path.join(INDEX_COMPONENTS, filename)
+        
+        # Save the generated data to the file path
+        with open(file_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        flash("Index components data saved successfully.")
+        return redirect('/')
+    except Exception as e:
+        flash(f"Error saving index components data: {str(e)}")
+        return redirect('/')
+    
 if __name__ == '__main__':
     app.run(debug=True)
