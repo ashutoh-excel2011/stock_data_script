@@ -277,6 +277,8 @@ def download():
                 
                 if all_data:
                     combined_data = pd.concat(all_data, ignore_index=True)
+                    cols = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
+                    combined_data = combined_data[cols]
                     combined_data.to_excel(writer, sheet_name='Historic Data', index=False)
             else:
                 # Multiple sheets - one per ticker
@@ -284,6 +286,9 @@ def download():
                 for ticker in tickers:
                     data = get_stock_data(ticker, start_date, end_date)
                     if data is not None and not data.empty:
+                        cols = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
+                        if all(col in data.columns for col in cols):
+                            data = data[cols]
                         data.to_excel(writer, sheet_name=ticker[:31], index=False)
                     else:
                         flash(f"No data found for {ticker} in the given date range")
