@@ -15,7 +15,7 @@ COPY . .
 WORKDIR /app/backend
 
 # Expose the required port
-EXPOSE 8080
+EXPOSE 80
 
 # Run the application
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "--timeout", "3600", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:80", "--timeout", "3600", "app:app"]
