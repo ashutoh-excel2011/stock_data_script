@@ -9,7 +9,7 @@ def get_current_details(tickers):
         if not tickers:
             return pd.DataFrame()
             
-        data = yf.download(tickers, period="1d", interval="60m", group_by="ticker", auto_adjust=False)
+        data = yf.download(tickers, period="1d", group_by="ticker", auto_adjust=False)
        
         if data.empty:
             return pd.DataFrame()
