@@ -59,7 +59,7 @@ def generate_specific_date_data(specific_date, tickers=None):
                     all_data = pd.concat([all_data, df], ignore_index=True)
         else:
             # Use default index components
-            components = get_index_components()
+            components, _ = get_index_components()
             for index, symbols in components.items():
                 print(f"Processing {index} for {specific_date}...")
                 df = get_specific_date_data(symbols, specific_date)

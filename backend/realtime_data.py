@@ -53,7 +53,7 @@ def generate_realtime_data(tickers=None):
                     all_data = pd.concat([all_data, df], ignore_index=True)
         else:
             # Use default index components
-            components = get_index_components()
+            components, _ = get_index_components()
             for index, symbols in components.items():
                 print(f"Processing {index}...")
                 df = get_current_details(symbols)
