@@ -3,7 +3,7 @@ import time
 import pytz
 import pandas as pd
 from io import BytesIO
-from historic_data import get_stock_data
+from historic_data import generate_historic_data
 from datetime import datetime, timedelta
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
@@ -232,26 +232,24 @@ def download_specific_date():
 @app.route('/download', methods=['POST'])
 def download():
     try:
-        # Get uploaded file
-        uploaded_file = request.files['file']
+        index_ticker_map = {}
         period_type = request.form['period_type']
         export_format = request.form['export_format']
         
-        # Validate file
-        if uploaded_file.filename == '':
-            flash('No file selected')
-            return redirect('/')
-
-        if not uploaded_file.filename.endswith(('.xlsx', '.xls')):
-            flash('Invalid file format. Please upload an Excel file.')
-            return redirect('/')
-
-        df_tickers = pd.read_excel(uploaded_file)
-        if 'Ticker' not in df_tickers.columns:
-            flash("Excel file must contain a 'Ticker' column")
-            return redirect('/')
-
-        tickers = df_tickers['Ticker'].unique().tolist()
+        if 'file' in request.files:
+            uploaded_file = request.files['file']
+            
+            if uploaded_file and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+                df_tickers = pd.read_excel(uploaded_file)
+                if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+                    flash("Excel file must contain 'Ticker' and 'Index' columns")
+                    return redirect('/')
+                
+                for index, ticker in df_tickers.groupby('Index'):
+                    index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+            elif uploaded_file.filename != '':
+                flash('Invalid file format. Please upload an Excel file.')
+                return redirect('/')
 
         # Handle date range or weeks input
         if period_type == 'date':
@@ -278,35 +276,21 @@ def download():
         # Create Excel file in memory
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            if export_format == 'single':
-                sheet_type = 'singlesheet'
-                # Combine all data into a single sheet
-                all_data = []
-                for ticker in tickers:
-                    data = get_stock_data(ticker, start_date, end_date)
-                    if data is not None and not data.empty:
-                        data['Ticker'] = ticker  # Add ticker column
-                        all_data.append(data)
-                    else:
-                        flash(f"No data found for {ticker} in the given date range")
-                
-                if all_data:
-                    combined_data = pd.concat(all_data, ignore_index=True)
-                    cols = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
-                    combined_data = combined_data[cols]
-                    combined_data.to_excel(writer, sheet_name='Historic Data', index=False)
+            if index_ticker_map:
+                if export_format == 'single':
+                    sheet_type = 'singlesheet'
+                    output = generate_historic_data(start_date, end_date, tickers=index_ticker_map)
+                else:
+                    sheet_type = 'multisheet'
+                    output = generate_historic_data(start_date, end_date, tickers=index_ticker_map, multisheet=True)
             else:
-                # Multiple sheets - one per ticker
-                sheet_type = 'multisheet'
-                for ticker in tickers:
-                    data = get_stock_data(ticker, start_date, end_date)
-                    if data is not None and not data.empty:
-                        cols = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
-                        if all(col in data.columns for col in cols):
-                            data = data[cols]
-                        data.to_excel(writer, sheet_name=ticker[:31], index=False)
-                    else:
-                        flash(f"No data found for {ticker} in the given date range")
+                if export_format == 'single':
+                    sheet_type = 'singlesheet'
+                    output = generate_historic_data(start_date, end_date)
+                else:
+                    sheet_type = 'multisheet'
+                    output = generate_historic_data(start_date, end_date, tickers=None, multisheet=True)                 
+            
 
         output.seek(0)
         filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
