@@ -54,7 +54,7 @@ def scheduled_download_all_data():
         print("Running scheduled task: Download All Data")
         output = generate_all_data()
         if output:
-            filename = f'scheduled_all_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'stocksdata-scheduled-daily-{time.strftime("%d%m%Y-%H%M%S")}.xlsx'
             gcs_path = GCS_SCHEDULED_DAILY_DIR + filename
 
             # Upload to GCS
@@ -73,7 +73,7 @@ def scheduled_download_realtime_data():
         print("Running scheduled task: Download Real-time Data")
         output = generate_realtime_data()
         if output:
-            filename = f'scheduled_realtime_data_{time.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
+            filename = f'stocksdata-scheduled-realtime-{time.strftime("%d%m%Y-%H%M%S")}.xlsx'
             gcs_path = GCS_SCHEDULED_REALTIME_DIR + filename
 
             # Upload to GCS
@@ -113,7 +113,7 @@ def download_all_data():
             output = generate_all_data()
 
         if output:
-            filename = f'Market data-All data-singlesheet-manual-{time.strftime("%d%m%y")}.xlsx'
+            filename = f'stocksdata-manual-daily-{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
             # Upload to GCS
@@ -152,7 +152,7 @@ def download_realtime_data():
             output = generate_realtime_data()
 
         if output:
-            filename = f'Market data-Realtime-singlesheet-manual-{time.strftime("%d%m%y")}.xlsx'
+            filename = f'stocksdata-manual-realtime-{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
             # file_path = os.path.join(MANUAL_REALTIME_DIR, filename)
             gcs_path = GCS_MANUAL_REALTIME_DIR + filename
 
@@ -199,7 +199,7 @@ def download_specific_date():
 
             if output:
                 # Generate filename and save file
-                filename = f'Market data-specific-date-singlesheet-manual-{time.strftime("%d%m%y")}-{specific_date}.xlsx'
+                filename = f'stocksdata-manual-historic-specific-date-{time.strftime("%d%m%Y-%H%M%S")}-dates-{specific_date}.xlsx'
                 gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
 
                 # Upload to GCS
@@ -284,7 +284,7 @@ def download():
                     output = generate_historic_data(start_date, end_date, tickers=None, multisheet=True)                 
 
         output.seek(0)
-        filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
+        filename = f'stocksdata-manual-historic-{sheet_type}-{time.strftime("%d%m%Y-%H%M%S")}-dates-{start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
         
         # Set GCS path based on export format
         if export_format == 'single':
