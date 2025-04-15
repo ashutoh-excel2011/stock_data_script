@@ -4,7 +4,7 @@ import tempfile
 import pandas as pd
 from io import BytesIO
 from google.cloud import storage
-from google.oauth2 import service_account
+from google.auth import default
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from historic_data import generate_historic_data
@@ -33,12 +33,20 @@ GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "Development/Scripts/Script-market/Stocks-dat
 GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components"
 
 # Set up Google Drive API credentials
-SERVICE_ACCOUNT_FILE = 'service.json'
+# SERVICE_ACCOUNT_FILE = 'service.json'
+# SCOPES = ['https://www.googleapis.com/auth/drive']
+# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
+
+# credentials = service_account.Credentials.from_service_account_file(
+#     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+# drive_service = build('drive', 'v3', credentials=credentials)
+
+
 SCOPES = ['https://www.googleapis.com/auth/drive']
 FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+# Automatically uses GCE's default service account
+credentials, project = default(scopes=SCOPES)
 drive_service = build('drive', 'v3', credentials=credentials)
 
 
