@@ -251,7 +251,7 @@ def download():
                 flash('Invalid file format. Please upload an Excel file.')
                 return redirect('/')
 
-        # Handle date range or weeks input
+        # Handle date range, weeks, or days input
         if period_type == 'date':
             start_date = request.form['start_date']
             end_date = request.form['end_date']
@@ -262,7 +262,7 @@ def download():
             if start_date_obj >= end_date_obj:
                 flash('End date must be after start date')
                 return redirect('/')
-        else:
+        elif period_type == 'weeks':
             weeks = int(request.form['weeks'])
             if weeks <= 0:
                 flash('Weeks must be a positive number')
@@ -270,6 +270,16 @@ def download():
             
             end_date_obj = datetime.now()
             start_date_obj = end_date_obj - timedelta(weeks=weeks)
+            start_date = start_date_obj.strftime('%Y-%m-%d')
+            end_date = end_date_obj.strftime('%Y-%m-%d')
+        else:  # period_type == 'days'
+            days = int(request.form['days'])
+            if days <= 0:
+                flash('Days must be a positive number')
+                return redirect('/')
+            
+            end_date_obj = datetime.now()
+            start_date_obj = end_date_obj - timedelta(days=days)
             start_date = start_date_obj.strftime('%Y-%m-%d')
             end_date = end_date_obj.strftime('%Y-%m-%d')
 
@@ -293,7 +303,7 @@ def download():
             
 
         output.seek(0)
-        filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
+        filename = f'Market data-historic-{sheet_type}-manual-{time.strftime("%d%m%y-%H%M%S")}-range {start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
         
         # Replace the file_path line in download route with:
         if export_format == 'single':

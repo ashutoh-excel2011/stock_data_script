@@ -50,65 +50,79 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-
-        <form method="POST" action="/download" enctype="multipart/form-data">
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="use_uploaded_file" name="use_uploaded_file">
-                <label class="form-check-label" for="use_uploaded_file">
-                    Upload Ticker File
-                </label>
-            </div>
-            <div class="form-group mb-3" id="file_upload_group">
-                <label for="file" class="form-label"><strong>Upload Excel File with Tickers:</strong></label>
-                <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.xls">
-                <div class="form-text">
-                    Excel file should contain a 'Index' and 'Ticker' column.
-                </div>
-            </div>
-            <div class="period-type-group mb-3">
-                <label class="form-label"><strong>Export Format:</strong></label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="export_format" id="single_sheet" value="single" checked>
-                    <label class="form-check-label" for="single_sheet">Single Sheet</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="export_format" id="multiple_sheets" value="multiple">
-                    <label class="form-check-label" for="multiple_sheets">Multiple Sheets</label>
-                </div>
-            </div>
-            <div class="period-type-group mb-3">
-                <label class="form-label"><strong>Select Period Type:</strong></label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="period_type" id="period_date" value="date" checked>
-                    <label class="form-check-label" for="period_date">Date</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="period_type" id="period_weeks" value="weeks">
-                    <label class="form-check-label" for="period_weeks">Weekly</label>
-                </div>
-            </div>
-            <div class="period-input date active mb-3">
-                <div class="form-group row g-3 align-items-center">
-                    <div class="col-md-6">
-                        <label for="start_date" class="form-label"><strong>Start Date:</strong></label>
-                        <input type="date" class="form-control" id="start_date" name="start_date">
+        <div class="card mb-4 mt-4">
+            <div class="card-header"><h4>Historic Data</h4></div>
+            <div class="card-body">
+                <form method="POST" action="/download" enctype="multipart/form-data">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="use_uploaded_file" name="use_uploaded_file">
+                        <label class="form-check-label" for="use_uploaded_file">
+                            Upload Ticker File
+                        </label>
                     </div>
-                    <div class="col-md-6">
-                        <label for="end_date" class="form-label"><strong>End Date:</strong></label>
-                        <input type="date" class="form-control" id="end_date" name="end_date">
+                    <div class="form-group mb-3" id="file_upload">
+                        <label for="file" class="form-label"><strong>Upload Excel File with Tickers:</strong></label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.xls">
+                        <div class="form-text">
+                            Excel file should contain a 'Index' and 'Ticker' column.
+                        </div>
                     </div>
-                </div>
+                    <div class="period-type-group mb-3">
+                        <label class="form-label"><strong>Export Format:</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export_format" id="single_sheet" value="single" checked>
+                            <label class="form-check-label" for="single_sheet">Single Sheet</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="export_format" id="multiple_sheets" value="multiple">
+                            <label class="form-check-label" for="multiple_sheets">Multiple Sheets</label>
+                        </div>
+                    </div>
+                    <div class="period-type-group mb-3">
+                        <label class="form-label"><strong>Select Period Type:</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period_type" id="period_date" value="date" checked>
+                            <label class="form-check-label" for="period_date">Date</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period_type" id="period_weeks" value="weeks">
+                            <label class="form-check-label" for="period_weeks">Weekly</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period_type" id="period_days" value="days">
+                            <label class="form-check-label" for="period_days">Days</label>
+                        </div>
+                    </div>
+                    <div class="period-input date active mb-3">
+                        <div class="form-group row g-3 align-items-center">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label"><strong>Start Date:</strong></label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label"><strong>End Date:</strong></label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="period-input weeks mb-3">
+                        <div class="form-group">
+                            <label for="weeks" class="form-label"><strong>Number of Weeks:</strong></label>
+                            <input type="number" class="form-control" id="weeks" name="weeks" min="1">
+                        </div>
+                    </div>
+                    <div class="period-input days mb-3">
+                        <div class="form-group">
+                            <label for="days" class="form-label"><strong>Number of Days:</strong></label>
+                            <input type="number" class="form-control" id="days" name="days" min="1">
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Download Stock Data</button>
+                    </div>
+                </form>
             </div>
-            <div class="period-input weeks mb-3">
-                <div class="form-group">
-                    <label for="weeks" class="form-label"><strong>Number of Weeks:</strong></label>
-                    <input type="number" class="form-control" id="weeks" name="weeks" min="1">
-                </div>
-            </div>
-            <div class="d-grid">
-                <button type="submit" class="btn btn-primary">Download Stock Data</button>
-            </div>
-        </form>
+        </div>
         <div class="card mb-4 mt-4">
             <div class="card-header"><h4>All Tickers Data</h4></div>
             <div class="card-body">
@@ -188,7 +202,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const checkbox = document.getElementById("use_uploaded_file");
-            const fileUploadGroup = document.getElementById("file_upload_group");
+            const fileUploadGroup = document.getElementById("file_upload");
     
             // Initial visibility
             fileUploadGroup.style.display = checkbox.checked ? "block" : "none";
