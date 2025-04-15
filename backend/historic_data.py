@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 from io import BytesIO
+import datetime
 from scrape_tickers import get_index_components
 
 def get_current_details(ticker, start_date, end_date):
@@ -12,7 +13,7 @@ def get_current_details(ticker, start_date, end_date):
         end_date_adjusted = pd.to_datetime(end_date) + pd.DateOffset(days=1)
         
         # Fetch data within the given date range
-        df = yf.download(ticker, start=start_date, end=end_date_adjusted, group_by='ticker', auto_adjust=False)
+        df = yf.download(ticker, start=start_date, end=end_date_adjusted, interval='90m', group_by='ticker', auto_adjust=False)
         
         if df.empty:
             return None
@@ -24,11 +25,19 @@ def get_current_details(ticker, start_date, end_date):
         if isinstance(df.columns, pd.MultiIndex):
             # Reset index for better structuring
             df = df.stack(level=0, future_stack=True).rename_axis(['Date', 'Ticker']).reset_index()
+        else:
+            df = df.reset_index()
+            df['Ticker'] = ticker
 
         # Drop the Volume column
         df = df.drop(columns=['Volume'])
 
-        return df
+        # Filter for specific date and time
+        df['Time'] = df['Date'].dt.time
+        df['DateOnly'] = df['Date'].dt.date
+        latest_data = df[df['Time'] == datetime.time(19, 30)]
+        
+        return latest_data
                 
     except Exception as e:
         print(f"Error fetching data for {ticker}: {e}")

@@ -57,7 +57,7 @@
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="use_uploaded_file" name="use_uploaded_file">
                         <label class="form-check-label" for="use_uploaded_file">
-                            Upload Selected Ticker File
+                            Upload Ticker File
                         </label>
                     </div>
                     <div class="form-group mb-3" id="file_upload">
@@ -88,6 +88,10 @@
                             <input class="form-check-input" type="radio" name="period_type" id="period_weeks" value="weeks">
                             <label class="form-check-label" for="period_weeks">Weekly</label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="period_type" id="period_days" value="days">
+                            <label class="form-check-label" for="period_days">Days</label>
+                        </div>
                     </div>
                     <div class="period-input date active mb-3">
                         <div class="form-group row g-3 align-items-center">
@@ -105,6 +109,12 @@
                         <div class="form-group">
                             <label for="weeks" class="form-label"><strong>Number of Weeks:</strong></label>
                             <input type="number" class="form-control" id="weeks" name="weeks" min="1">
+                        </div>
+                    </div>
+                    <div class="period-input days mb-3">
+                        <div class="form-group">
+                            <label for="days" class="form-label"><strong>Number of Days:</strong></label>
+                            <input type="number" class="form-control" id="days" name="days" min="1">
                         </div>
                     </div>
                     <div class="d-grid">
