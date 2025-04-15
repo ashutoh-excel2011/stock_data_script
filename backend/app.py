@@ -33,7 +33,7 @@ GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "Development/Scripts/Script-market/Stocks-dat
 GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components"
 
 # Set up Google Drive API credentials
-SERVICE_ACCOUNT_FILE = 'g_credentials.json'
+SERVICE_ACCOUNT_FILE = 'service.json'
 SCOPES = ['https://www.googleapis.com/auth/drive']
 FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
 
@@ -82,13 +82,16 @@ def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash"):
             'name': file_name,
             'parents': [parent_id],
         }
-
-        media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        uploaded_file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
+        try:
+            media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            uploaded_file = drive_service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+            
+        except Exception as upload_error:
+            print(f"Upload failed at media upload step: {str(upload_error)}")
 
         print(f"Uploaded to Google Drive folder")
     except Exception as e:
@@ -118,7 +121,7 @@ def scheduled_download_all_data():
         print("Running scheduled task: Download All Data")
         output = generate_all_data()
         if output:
-            filename = f'{time.strftime("%d%m%Y-%H%M%S")}.xlsx'
+            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
             drive_filename = f'stocksdata-scheduled-daily-{filename}'
             gcs_path = GCS_SCHEDULED_DAILY_DIR + filename
 
@@ -128,7 +131,7 @@ def scheduled_download_all_data():
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
             
-            print(f"All tickers data saved as {filename}")
+            return f"All tickers data saved as {filename}"
         else:
             print("Failed to generate all tickers data")
     except Exception as e:
@@ -141,7 +144,7 @@ def scheduled_download_realtime_data():
         print("Running scheduled task: Download Real-time Data")
         output = generate_realtime_data()
         if output:
-            filename = f'{time.strftime("%d%m%Y-%H%M%S")}.xlsx'
+            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
             drive_filename = f'stocksdata-scheduled-realtime-{filename}'
             gcs_path = GCS_SCHEDULED_REALTIME_DIR + filename
 
@@ -151,7 +154,7 @@ def scheduled_download_realtime_data():
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
             
-            print(f"Realtime data saved as {filename}")
+            return f"Realtime data saved as {filename}"
         else:
             print("Failed to generate real-time data")
     except Exception as e:
