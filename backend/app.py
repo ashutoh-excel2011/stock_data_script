@@ -22,14 +22,14 @@ app.secret_key = "sp500data1"
 GCS_BUCKET_NAME = "sp500data1"
 
 # Define GCS paths based on your structure
-GCS_SCHEDULED_DAILY_DIR = "Development/Scripts/Script-market/Stocks-data/Scheduled/Daily/"
-GCS_SCHEDULED_REALTIME_DIR = "Development/Scripts/Script-market/Stocks-data/Scheduled/Realtime/"
+GCS_SCHEDULED_DAILY_DIR = "market-data/scheduled/daily/"
+GCS_SCHEDULED_REALTIME_DIR = "market-data/scheduled/realtime/"
 
-GCS_MANUAL_DAILY_DIR = "Development/Scripts/Script-market/Stocks-data/Manual/Daily/"
-GCS_MANUAL_REALTIME_DIR = "Development/Scripts/Script-market/Stocks-data/Manual/Realtime/"
-GCS_MANUAL_HISTORIC_DIR_MULTI = "Development/Scripts/Script-market/Stocks-data/Manual/Historic/Multiple-sheets/"
-GCS_MANUAL_HISTORIC_DIR_SINGLE = "Development/Scripts/Script-market/Stocks-data/Manual/Historic/Single-sheet/"
-GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "Development/Scripts/Script-market/Stocks-data/Manual/Historic/Specific-date/"
+GCS_MANUAL_DAILY_DIR = "market-data/manual/daily/"
+GCS_MANUAL_REALTIME_DIR = "market-data/manual/realtime/"
+GCS_MANUAL_HISTORIC_DIR_MULTI = "market-data/manual/historic/multiple-sheets/"
+GCS_MANUAL_HISTORIC_DIR_SINGLE = "market-data/manual/historic/single-sheet/"
+GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "market-data/manual/historic/specific-date/"
 GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components"
 
 # Set up Google Drive API credentials
