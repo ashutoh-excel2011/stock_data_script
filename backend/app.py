@@ -5,6 +5,7 @@ import pandas as pd
 from io import BytesIO
 from google.cloud import storage
 from google.auth import default
+from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from historic_data import generate_historic_data
@@ -41,12 +42,25 @@ GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-compone
 #     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 # drive_service = build('drive', 'v3', credentials=credentials)
 
+# SCOPES = ['https://www.googleapis.com/auth/drive']
+# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
+
+# # Automatically uses GCE's default service account
+# credentials, project = default(scopes=SCOPES)
+# drive_service = build('drive', 'v3', credentials=credentials)
+
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
-FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
+FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
 
-# Automatically uses GCE's default service account
-credentials, project = default(scopes=SCOPES)
+try:
+    credentials, project = default(scopes=SCOPES)
+    print(f"Authenticated successfully as: {credentials.service_account_email}")
+except DefaultCredentialsError as e:
+    print(f"Authentication failed: {str(e)}")
+    print("Please ensure the VM instance has the correct service account attached")
+    raise
+
 drive_service = build('drive', 'v3', credentials=credentials)
 
 
@@ -435,4 +449,4 @@ def download_index_components():
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 80))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
