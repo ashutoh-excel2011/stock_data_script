@@ -66,11 +66,16 @@ def generate_historic_data(start_date, end_date, tickers=None, multisheet=None):
                 if not df.empty:
                     df['Index'] = index
                     all_data = pd.concat([all_data, df], ignore_index=True)
+                    
+        # Split datetime into separate date and time columns
+        if not all_data.empty:
+            all_data['Time'] = pd.to_datetime(all_data['Date']).dt.strftime('%H:%M:%S')
+            all_data['Date'] = pd.to_datetime(all_data['Date']).dt.strftime('%Y-%m-%d')
 
         # Write all data to a single sheet
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             if not all_data.empty:
-                cols = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Adj Close']
+                cols = ['Ticker', 'Date', 'Time', 'Open', 'High', 'Low', 'Close', 'Adj Close']
                 all_data = all_data[cols]
                 all_data = all_data.sort_values(['Ticker', 'Date'])
                 
