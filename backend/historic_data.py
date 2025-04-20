@@ -51,21 +51,25 @@ def generate_historic_data(start_date, end_date, tickers=None, multisheet=None):
         
         if tickers:
             # Use provided tickers
+            all_tickers = []
             for index, symbols in tickers.items():
-                print(f"Processing {index} for {start_date} to {end_date}...")
-                df = get_current_details(symbols, start_date, end_date)
-                if not df.empty:
-                    df['Index'] = index
-                    all_data = pd.concat([all_data, df], ignore_index=True)
+                all_tickers.extend([symbol for symbol in symbols if symbol not in all_tickers])
+            
+            print(f"Processing from {start_date} to {end_date}...")
+            df = get_current_details(all_tickers, start_date, end_date)
+            if not df.empty:
+                all_data = pd.concat([all_data, df], ignore_index=True)
         else:
             # Use default index components
             components, _ = get_index_components()
+            all_tickers = []
             for index, symbols in components.items():
-                print(f"Processing {index} for {start_date} to {end_date}...")
-                df = get_current_details(symbols, start_date, end_date)
-                if not df.empty:
-                    df['Index'] = index
-                    all_data = pd.concat([all_data, df], ignore_index=True)
+                all_tickers.extend([symbol for symbol in symbols if symbol not in all_tickers])
+                
+            print(f"Processing for {start_date} to {end_date}...")
+            df = get_current_details(symbols, start_date, end_date)
+            if not df.empty:
+                all_data = pd.concat([all_data, df], ignore_index=True)
                     
         # Split datetime into separate date and time columns
         if not all_data.empty:

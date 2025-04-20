@@ -1,10 +1,11 @@
 import os
 import time
+import json
 import tempfile
 import pandas as pd
 from io import BytesIO
 from google.cloud import storage
-from google.auth import default
+from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -36,32 +37,23 @@ GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-compone
 # Set up Google Drive API credentials
 # SERVICE_ACCOUNT_FILE = 'service.json'
 # SCOPES = ['https://www.googleapis.com/auth/drive']
-# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
+# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
 
 # credentials = service_account.Credentials.from_service_account_file(
 #     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 # drive_service = build('drive', 'v3', credentials=credentials)
 
-# SCOPES = ['https://www.googleapis.com/auth/drive']
-# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp' 
-
-# # Automatically uses GCE's default service account
-# credentials, project = default(scopes=SCOPES)
-# drive_service = build('drive', 'v3', credentials=credentials)
-
-
 SCOPES = ['https://www.googleapis.com/auth/drive']
 FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
 
 try:
-    credentials, project = default(scopes=SCOPES)
-    print(f"Authenticated successfully as: {credentials.service_account_email}")
-except DefaultCredentialsError as e:
-    print(f"Authentication failed: {str(e)}")
-    print("Please ensure the VM instance has the correct service account attached")
-    raise
-
-drive_service = build('drive', 'v3', credentials=credentials)
+    service_account_info = json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT'])
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info, scopes=SCOPES)
+    drive_service = build('drive', 'v3', credentials=credentials)
+    print(f"Authenticated as: {service_account_info['client_email']}")
+except Exception as e:
+    print(f"Drive authentication failed: {str(e)}")
 
 
 # Initialize Google Cloud Storage client
@@ -143,7 +135,7 @@ def scheduled_download_all_data():
         print("Running scheduled task: Download All Data")
         output = generate_all_data()
         if output:
-            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
+            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{(datetime.now() - timedelta(days=1)).strftime("%d%m%Y")}.xlsx'
             drive_filename = f'stocksdata-scheduled-daily-{filename}'
             gcs_path = GCS_SCHEDULED_DAILY_DIR + filename
 
@@ -210,7 +202,7 @@ def download_all_data():
             output = generate_all_data()
 
         if output:
-            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
+            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{(datetime.now() - timedelta(days=1)).strftime("%d%m%Y")}.xlsx'
             drive_filename = f'stocksdata-manual-daily-{filename}'
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
@@ -448,5 +440,5 @@ def download_index_components():
         return redirect('/')
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 80))
+    port = int(os.getenv("PORT", 8080))
     app.run(host='0.0.0.0', port=port, debug=True)
