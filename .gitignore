@@ -43,3 +43,8 @@ instance/
 .venv*/
 venv/
 venv*/
+
+# secrets
+*.env
+*.env.local
+backend/service.json
