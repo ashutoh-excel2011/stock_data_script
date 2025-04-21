@@ -2,9 +2,11 @@ import os
 import time
 import json
 import tempfile
+import google.auth
 import pandas as pd
 from io import BytesIO
 from google.cloud import storage
+from google.auth import default
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
@@ -47,14 +49,11 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
 
 try:
-    service_account_info = json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT'])
-    credentials = service_account.Credentials.from_service_account_info(
-        service_account_info, scopes=SCOPES)
+    credentials = google.auth.default(scopes=SCOPES)[0]
     drive_service = build('drive', 'v3', credentials=credentials)
-    print(f"Authenticated as: {service_account_info['client_email']}")
+    print("Drive service authenticated successfully using Compute Engine service account.")
 except Exception as e:
     print(f"Drive authentication failed: {str(e)}")
-
 
 # Initialize Google Cloud Storage client
 storage_client = storage.Client()
