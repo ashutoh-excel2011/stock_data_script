@@ -5,8 +5,10 @@ import tempfile
 import google.auth
 import pandas as pd
 from io import BytesIO
-from google.cloud import storage
+import googleapiclient.errors
 from google.auth import default
+from google.cloud import storage
+from google.cloud import secretmanager
 from google.oauth2 import service_account
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
@@ -24,6 +26,8 @@ app.secret_key = "sp500data1"
 
 # Set up Google Cloud Storage details
 GCS_BUCKET_NAME = "sp500data1"
+PROJECT_ID = "extended-byway-454621-s6"
+SECRET_ID = "google_drive"
 
 # Define GCS paths based on your structure
 GCS_SCHEDULED_DAILY_DIR = "market-data/scheduled/daily/"
@@ -37,7 +41,7 @@ GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "market-data/manual/historic/specific-date/"
 GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components"
 
 # Set up Google Drive API credentials
-# SERVICE_ACCOUNT_FILE = 'service.json'
+# SERVICE_ACCOUNT_FILE = 'service2.json'
 # SCOPES = ['https://www.googleapis.com/auth/drive']
 # FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
 
@@ -45,70 +49,110 @@ GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-compone
 #     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 # drive_service = build('drive', 'v3', credentials=credentials)
 
-SCOPES = ['https://www.googleapis.com/auth/drive']
-FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
+def get_service_account_json():
+    """Retrieves the service account JSON from Secret Manager."""
+    client = secretmanager.SecretManagerServiceClient()
+    name = "projects/{PROJECT_ID}/secrets/{SECRET_ID}/versions/latest".format(
+        PROJECT_ID=PROJECT_ID,
+        SECRET_ID=SECRET_ID
+    )
+    response = client.access_secret_version(request={"name": name})
+    print(f"Secret version accessed: {response}")
+    return response.payload.data.decode("UTF-8")
 
-try:
-    credentials = google.auth.default(scopes=SCOPES)[0]
-    drive_service = build('drive', 'v3', credentials=credentials)
-    print("Drive service authenticated successfully using Compute Engine service account.")
-except Exception as e:
-    print(f"Drive authentication failed: {str(e)}")
+def build_drive_service():
+    try:
+        credentials_info = json.loads(get_service_account_json())  # Parse as JSON
+        print(credentials_info)
+        credentials = service_account.Credentials.from_service_account_info(credentials_info)
+        drive_service = build('drive', 'v3', credentials=credentials)
+        print("Drive service authenticated successfully using Secret Manager.")
+        return drive_service
+    except Exception as e:
+        print(f"Drive authentication failed: {str(e)}")
+        return None
+
+# Use the build_drive_service function to get the drive_service
+drive_service = build_drive_service()
 
 # Initialize Google Cloud Storage client
 storage_client = storage.Client()
 
 # Function to upload a file to Google Drive
 
-def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash"):
-    try:
-        folder_names = folder_path.strip('/').split('/')
-        parent_id = None
+def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash", max_retries=3):
+ #To use the global drive_service instead of building it again
+ global drive_service
+ if not drive_service:
+     print("Drive service is not initialized.")
+     return
 
-        # Walk through the folder path and create missing folders
-        for folder_name in folder_names:
-            query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-            if parent_id:
-                query += f" and '{parent_id}' in parents"
+ try:
+     folder_names = folder_path.strip('/').split('/')
+     parent_id = None
 
-            response = drive_service.files().list(q=query, fields="files(id, name)").execute()
-            folders = response.get('files', [])
+     # Walk through the folder path and create missing folders
+     for folder_name in folder_names:
+         query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+         if parent_id:
+             query += f" and '{parent_id}' in parents"
 
-            if folders:
-                parent_id = folders[0]['id']
-            else:
-                metadata = {
-                    'name': folder_name,
-                    'mimeType': 'application/vnd.google-apps.folder',
-                    'parents': [parent_id] if parent_id else []
-                }
-                folder = drive_service.files().create(body=metadata, fields='id').execute()
-                parent_id = folder.get('id')
+         response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+         folders = response.get('files', [])
 
-        # Save BytesIO to temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
-            temp_file.write(file_obj.getvalue())
-            temp_path = temp_file.name
+         if folders:
+             parent_id = folders[0]['id']
+         else:
+             metadata = {
+                 'name': folder_name,
+                 'mimeType': 'application/vnd.google-apps.folder',
+                 'parents': [parent_id] if parent_id else []
+             }
+             folder = drive_service.files().create(body=metadata, fields='id').execute()
+             parent_id = folder.get('id')
 
-        # Prepare metadata and upload
-        file_metadata = {
-            'name': file_name,
-            'parents': [parent_id],
-        }
-        try:
-            media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            uploaded_file = drive_service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
-            
-        except Exception as upload_error:
-            print(f"Upload failed at media upload step: {str(upload_error)}")
+     # Save BytesIO to temp file
+     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+         temp_file.write(file_obj.getvalue())
+         temp_path = temp_file.name
 
-        print(f"Uploaded to Google Drive folder")
-    except Exception as e:
-        print(f"Error uploading: {str(e)}")
+     # Prepare metadata and upload
+     file_metadata = {
+         'name': file_name,
+         'parents': [parent_id],
+     }
+
+     for attempt in range(max_retries):
+         try:
+             media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+             uploaded_file = drive_service.files().create(
+                 body=file_metadata,
+                 media_body=media,
+                 fields='id'
+             ).execute()
+             print(f"Uploaded to Google Drive folder")
+             return #Success!
+
+         except (BrokenPipeError, googleapiclient.errors.HttpError) as upload_error:
+             print(f"Upload failed at attempt {attempt+1}: {str(upload_error)}")
+             if attempt < max_retries -1:
+                 wait_time = (2 ** attempt) * 5 #Exponential Backoff
+                 print(f"Retrying in {wait_time} seconds...")
+                 time.sleep(wait_time)
+             else:
+                 print("Max retries reached. Upload failed.")
+                 raise # Re-raise exception to be handled upstream
+         except Exception as upload_error:
+             print(f"Upload failed at media upload step: {str(upload_error)}")
+             raise  # Re-raise the exception to be handled upstream
+
+ except Exception as e:
+     print(f"Error uploading: {str(e)}")
+     raise  # Re-raise the exception to be handled upstream
+ finally:
+     #Clean up temp file
+     if 'temp_path' in locals() and os.path.exists(temp_path):
+         os.remove(temp_path)
 
     
 def upload_to_gcs(file_content, gcs_path):
