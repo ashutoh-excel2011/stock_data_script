@@ -1,7 +1,7 @@
 import yfinance as yf
 import pandas as pd
 from io import BytesIO
-from scrape_tickers import get_index_components
+from utils import get_tickers_from_gcs
 
 def get_specific_date_data(tickers, specific_date):
     """Fetch data for a list of tickers on a specific date"""
@@ -58,14 +58,18 @@ def generate_specific_date_data(specific_date, tickers=None):
                     df['Index'] = index
                     all_data = pd.concat([all_data, df], ignore_index=True)
         else:
-            # Use default index components
-            components, _ = get_index_components()
-            for index, symbols in components.items():
-                print(f"Processing {index} for {specific_date}...")
-                df = get_specific_date_data(symbols, specific_date)
-                if not df.empty:
-                    df['Index'] = index
-                    all_data = pd.concat([all_data, df], ignore_index=True)
+            # Use default tickers from GCS template
+            index_ticker_map = get_tickers_from_gcs()
+            if index_ticker_map:
+                for index, symbols in index_ticker_map.items():
+                    print(f"Processing {index} for {specific_date}...")
+                    df = get_specific_date_data(symbols, specific_date)
+                    if not df.empty:
+                        df['Index'] = index
+                        all_data = pd.concat([all_data, df], ignore_index=True)
+            else:
+                print("Failed to load tickers from GCS. Aborting data generation.")
+                return None
         
         # Split datetime into separate date and time columns
         if not all_data.empty:

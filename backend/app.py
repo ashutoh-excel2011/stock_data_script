@@ -6,15 +6,13 @@ import google.auth
 import pandas as pd
 from io import BytesIO
 import googleapiclient.errors
-from google.auth import default
-from google.cloud import storage
 from google.cloud import secretmanager
 from google.oauth2 import service_account
-from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from historic_data import generate_historic_data
 from datetime import datetime, timedelta
+from utils import create_storage_client
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
@@ -63,7 +61,6 @@ def get_service_account_json():
 def build_drive_service():
     try:
         credentials_info = json.loads(get_service_account_json())  # Parse as JSON
-        print(credentials_info)
         credentials = service_account.Credentials.from_service_account_info(credentials_info)
         drive_service = build('drive', 'v3', credentials=credentials)
         print("Drive service authenticated successfully using Secret Manager.")
@@ -76,10 +73,9 @@ def build_drive_service():
 drive_service = build_drive_service()
 
 # Initialize Google Cloud Storage client
-storage_client = storage.Client()
+storage_client = create_storage_client()
 
 # Function to upload a file to Google Drive
-
 def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash", max_retries=3):
  #To use the global drive_service instead of building it again
  global drive_service
@@ -154,7 +150,7 @@ def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash", max_re
      if 'temp_path' in locals() and os.path.exists(temp_path):
          os.remove(temp_path)
 
-    
+# Function to upload a file to Google Cloud Storage
 def upload_to_gcs(file_content, gcs_path):
     """Upload file content (BytesIO) to Google Cloud Storage."""
     try:
@@ -472,9 +468,11 @@ def download_index_components():
         drive_filename = f'index-components-{filename}'
         gcs_path = GCS_INDEX_COMPONENTS + filename
         
-        upload_to_gcs(output, gcs_path)
-        
+        # Upload in Google Drive
         upload_to_drive(output, drive_filename, folder_path="stocks-data/index-components")
+        
+        # Upload to GCS
+        upload_to_gcs(output, gcs_path)
         
         flash("Index components data saved successfully.")
         return redirect('/')

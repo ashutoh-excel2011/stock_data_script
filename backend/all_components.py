@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 from io import BytesIO
 from datetime import datetime, timedelta
-from scrape_tickers import get_index_components
+from utils import get_tickers_from_gcs
 
 def get_current_details(tickers):
     """Fetch current market data for a list of tickers"""
@@ -56,15 +56,19 @@ def generate_all_data(tickers=None):
                     df['Index'] = index
                     all_data = pd.concat([all_data, df], ignore_index=True)
         else:
-            # Use default index components
-            components, _ = get_index_components()
-            for index, symbols in components.items():
-                print(f"Processing {index}...")
-                df = get_current_details(symbols)
-                if not df.empty:
-                    df['Index'] = index
-                    all_data = pd.concat([all_data, df], ignore_index=True)
-                    
+            # Use default tickers from GCS template
+            index_ticker_map = get_tickers_from_gcs()
+            if index_ticker_map:
+                for index, symbols in index_ticker_map.items():
+                    print(f"Processing {index}...")
+                    df = get_current_details(symbols)
+                    if not df.empty:
+                        df['Index'] = index
+                        all_data = pd.concat([all_data, df], ignore_index=True)
+            else:
+                print("Failed to load tickers from GCS. Aborting data generation.")
+                return None
+
         # Split datetime into separate date and time columns
         if not all_data.empty:
             all_data['Time'] = pd.to_datetime(all_data['Date']).dt.strftime('%H:%M:%S')

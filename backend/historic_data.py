@@ -1,8 +1,7 @@
 import yfinance as yf
 import pandas as pd
 from io import BytesIO
-import datetime
-from scrape_tickers import get_index_components
+from utils import get_tickers_from_gcs
 
 def get_current_details(ticker, start_date, end_date):
     """Fetch stock data for a given ticker and date range"""
@@ -55,17 +54,22 @@ def generate_historic_data(start_date, end_date, tickers=None, multisheet=None):
             if not df.empty:
                 all_data = pd.concat([all_data, df], ignore_index=True)
         else:
-            # Use default index components
-            components, _ = get_index_components()
-            all_tickers = []
-            for index, symbols in components.items():
-                all_tickers.extend([symbol for symbol in symbols if symbol not in all_tickers])
-                
-            print(f"Processing for {start_date} to {end_date}...")
-            df = get_current_details(all_tickers, start_date, end_date)
-            if not df.empty:
-                all_data = pd.concat([all_data, df], ignore_index=True)
-                    
+            # Use default tickers from GCS template
+            index_ticker_map = get_tickers_from_gcs()
+            if index_ticker_map:
+                all_tickers = []
+                for index, symbols in index_ticker_map.items():
+                    all_tickers.extend([symbol for symbol in symbols if symbol not in all_tickers])
+
+                print(f"Processing from {start_date} to {end_date}...")
+                df = get_current_details(all_tickers, start_date, end_date)
+                if not df.empty:
+                    all_data = pd.concat([all_data, df], ignore_index=True)
+
+            else:
+                print("Failed to load tickers from GCS. Aborting data generation.")
+                return None # Or whatever error handling you prefer
+
         # Split datetime into separate date and time columns
         if not all_data.empty:
             all_data['Time'] = pd.to_datetime(all_data['Date']).dt.strftime('%H:%M:%S')
@@ -89,5 +93,5 @@ def generate_historic_data(start_date, end_date, tickers=None, multisheet=None):
         return output
     
     except Exception as e:
-        print(f"Error generating specific date data: {str(e)}")
+        print(f"Error generating historic data: {str(e)}")
         return None
