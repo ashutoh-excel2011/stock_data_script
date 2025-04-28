@@ -76,7 +76,7 @@ drive_service = build_drive_service()
 storage_client = create_storage_client()
 
 # Function to upload a file to Google Drive
-def upload_to_drive(file_obj, file_name, folder_path="stocks-data/trash", max_retries=3):
+def upload_to_drive(file_obj, file_name, folder_path="market-data/trash", max_retries=3):
  #To use the global drive_service instead of building it again
  global drive_service
  if not drive_service:
@@ -179,7 +179,7 @@ def scheduled_download_all_data():
             gcs_path = GCS_SCHEDULED_DAILY_DIR + filename
 
             # Upload in Google Drive
-            upload_to_drive(output, drive_filename, folder_path="stocks-data/scheduled/daily")
+            upload_to_drive(output, drive_filename, folder_path="market-data/scheduled/daily")
             
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
@@ -202,7 +202,7 @@ def scheduled_download_realtime_data():
             gcs_path = GCS_SCHEDULED_REALTIME_DIR + filename
 
             # Upload in Google Drive
-            upload_to_drive(output, drive_filename, folder_path="stocks-data/scheduled/realtime")
+            upload_to_drive(output, drive_filename, folder_path="market-data/scheduled/realtime")
             
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
@@ -246,7 +246,7 @@ def download_all_data():
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
             # Upload in Google Drive
-            upload_to_drive(output, drive_filename, folder_path="stocks-data/manual/daily")
+            upload_to_drive(output, drive_filename, folder_path="market-data/manual/daily")
             
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
@@ -289,7 +289,7 @@ def download_realtime_data():
             gcs_path = GCS_MANUAL_REALTIME_DIR + filename
             
             # Upload in Google Drive
-            upload_to_drive(output, drive_filename, folder_path="stocks-data/manual/realtime")
+            upload_to_drive(output, drive_filename, folder_path="market-data/manual/realtime")
             
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
@@ -339,7 +339,7 @@ def download_specific_date():
                 gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
 
                 # Upload in Google Drive
-                upload_to_drive(output, drive_filename, folder_path="stocks-data/manual/historic/specific-date")
+                upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/specific-date")
             
                 # Upload to GCS
                 upload_to_gcs(output, gcs_path)
@@ -444,7 +444,7 @@ def download():
             gcs_path = GCS_MANUAL_HISTORIC_DIR_MULTI + filename
         
         # Upload in Google Drive
-        upload_to_drive(output, drive_filename, folder_path="stocks-data/manual/historic/single-sheet" if export_format == 'single' else "stocks-data/manual/historic/multiple-sheets")
+        upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
     
         # Upload to GCS
         upload_to_gcs(output, gcs_path)
@@ -469,7 +469,7 @@ def download_index_components():
         gcs_path = GCS_INDEX_COMPONENTS + filename
         
         # Upload in Google Drive
-        upload_to_drive(output, drive_filename, folder_path="stocks-data/index-components")
+        upload_to_drive(output, drive_filename, folder_path="market-data/index-components")
         
         # Upload to GCS
         upload_to_gcs(output, gcs_path)
@@ -481,5 +481,5 @@ def download_index_components():
         return redirect('/')
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 80))
+    port = int(os.getenv("PORT", 8080))
     app.run(host='0.0.0.0', port=port, debug=True)
