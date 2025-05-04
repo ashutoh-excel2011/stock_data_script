@@ -313,7 +313,7 @@ def api_download_all_data():
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
             # Upload
-            # upload_to_drive(output, drive_filename, folder_path="market-data/manual/daily")
+            upload_to_drive(output, drive_filename, folder_path="market-data/manual/daily")
             upload_to_gcs(output, gcs_path)
 
             return jsonify({'status': 'success', 'message': 'File saved successfully.'}), 200
