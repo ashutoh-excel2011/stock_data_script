@@ -126,16 +126,23 @@
         <div class="card mb-4 mt-4">
             <div class="card-header"><h4>Daily Tickers Data</h4></div>
             <div class="card-body">
-                <form action="{{ url_for('download_all_data') }}" method="post" enctype="multipart/form-data">
+                <form id="all_data_form" enctype="multipart/form-data">
                     <div class="form-group mb-3">
                         <label for="all_data_file" class="form-label"><strong>Upload Selected Tickers (Optional)</strong>:</label>
                         <input class="form-control" type="file" id="all_data_file" name="file" accept=".xlsx,.xls" required>
                     </div>
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Download Selected Tickers Data</button>
-                        <a href="{{ url_for('download_all_data') }}" class="btn btn-secondary">Download All Tickers data</a>
+                        <button type="submit" id="submit_button" class="btn btn-primary">Download Selected Tickers Data</button>
+                        <button type="button" id="download_all_btn" class="btn btn-secondary">Download All Tickers Data</button>
                     </div>
                 </form>
+                <div id="progress_container" class="progress mt-3" style="height: 25px; display: none;">
+                    <div id="progress_bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                         role="progressbar" style="width: 100%">
+                      Downloading...
+                    </div>
+                </div>
+                <div id="alert_box" class="alert d-none mt-3" role="alert"></div>
             </div>
         </div>
         <div class="card mb-4">
@@ -213,6 +220,77 @@
             });
         });
     </script>
-    
+    <script>
+        function showProgressBar() {
+            document.getElementById('progress_container').style.display = 'block';
+        }
+        
+        function hideProgressBar() {
+            document.getElementById('progress_container').style.display = 'none';
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alertBox = document.getElementById('alert_box');
+            alertBox.className = `alert alert-${type} mt-3`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('d-none');
+        
+            setTimeout(() => {
+                alertBox.classList.add('d-none');
+            }, 5000);
+        }
+        
+        document.getElementById('all_data_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+        
+            const formData = new FormData(this);
+            const btn = document.getElementById('submit_button');
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+        
+            showProgressBar();
+        
+            fetch('/download_all_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const result = await response.json();
+                showAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideProgressBar();
+                btn.disabled = false;
+                btn.innerText = 'Download Selected Tickers Data';
+            });
+        });
+        
+        document.getElementById('download_all_btn').addEventListener('click', function () {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+        
+            showProgressBar();
+        
+            fetch('/download_all_data', {
+                method: 'POST'
+            })
+            .then(async response => {
+                const result = await response.json();
+                showAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideProgressBar();
+                btn.disabled = false;
+                btn.innerText = 'Download All Tickers Data';
+            });
+        });
+    </script>                 
 </body>
 </html>

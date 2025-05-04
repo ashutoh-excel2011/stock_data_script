@@ -17,7 +17,7 @@ from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
 from scrape_tickers import generate_index_name
-from flask import Flask, render_template, request, flash, redirect
+from flask import Flask, render_template, request, flash, redirect, jsonify
 
 app = Flask(__name__)
 app.secret_key = "sp500data1"
@@ -285,21 +285,20 @@ def scheduled_download_realtime_data_single():
 def index():
     return render_template('index.html')
 
-@app.route('/download_all_data', methods=['GET', 'POST'])
-def download_all_data():
+@app.route('/download_all_data', methods=['POST'])
+def api_download_all_data():
     try:
         index_ticker_map = {}
-        # Check if a file was uploaded
-        if request.method == 'POST' and 'file' in request.files:
+
+        # Handle file upload via AJAX
+        if 'file' in request.files:
             uploaded_file = request.files['file']
             
             if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
-                # Read tickers from uploaded file
                 df_tickers = pd.read_excel(uploaded_file)
                 if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
-                    flash("Excel file must contain 'Ticker' and 'Index' columns")
-                    return redirect('/')
-                    
+                    return jsonify({'status': 'error', 'message': "Excel file must contain 'Ticker' and 'Index' columns"}), 400
+
                 for index, ticker in df_tickers.groupby('Index'):
                     index_ticker_map[index] = ticker['Ticker'].unique().tolist()
                 output = generate_all_data(tickers=index_ticker_map)
@@ -313,20 +312,16 @@ def download_all_data():
             drive_filename = f'stocksdata-manual-daily-{filename}'
             gcs_path = GCS_MANUAL_DAILY_DIR + filename
 
-            # Upload in Google Drive
-            upload_to_drive(output, drive_filename, folder_path="market-data/manual/daily")
-            
-            # Upload to GCS
+            # Upload
+            # upload_to_drive(output, drive_filename, folder_path="market-data/manual/daily")
             upload_to_gcs(output, gcs_path)
+
+            return jsonify({'status': 'success', 'message': 'File saved successfully.'}), 200
         
-            flash(f"File saved successfully.")
-            return redirect('/')
-        
-        flash("Failed to generate all tickers data")
-        return redirect('/')
+        return jsonify({'status': 'error', 'message': 'Failed to generate all tickers data'}), 500
+
     except Exception as e:
-        flash(f"Error generating all tickers data: {str(e)}")
-        return redirect('/')
+        return jsonify({'status': 'error', 'message': f"Error: {str(e)}"}), 500
     
 @app.route('/download_realtime_data', methods=['GET', 'POST'])
 def download_realtime_data():
