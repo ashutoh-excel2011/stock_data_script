@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from historic_data import generate_historic_data
 from datetime import datetime, timedelta
-from utils import create_storage_client
+from utils import create_storage_client, generate_ticker_template
 from all_components import generate_all_data
 from realtime_data import generate_realtime_data
 from specific_date import generate_specific_date_data
@@ -30,18 +30,20 @@ SECRET_ID = "google_drive"
 # Define GCS paths based on your structure
 GCS_SCHEDULED_DAILY_DIR = "market-data/scheduled/daily/"
 GCS_SCHEDULED_REALTIME_DIR = "market-data/scheduled/realtime/"
+GCS_SCHEDULED_REALTIME_SINGLE_DIR = "market-data/scheduled/realtime/single-file/"
 
 GCS_MANUAL_DAILY_DIR = "market-data/manual/daily/"
 GCS_MANUAL_REALTIME_DIR = "market-data/manual/realtime/"
 GCS_MANUAL_HISTORIC_DIR_MULTI = "market-data/manual/historic/multiple-sheets/"
 GCS_MANUAL_HISTORIC_DIR_SINGLE = "market-data/manual/historic/single-sheet/"
 GCS_MANUAL_HISTORIC_DIR_SPECIFIC = "market-data/manual/historic/specific-date/"
-GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components"
+GCS_TEMPLATE = "Development/Scripts/Script-market/Template/"
+GCS_INDEX_COMPONENTS = "Development/Scripts/Script-market/Template/Index-components/"
 
 # Set up Google Drive API credentials
 # SERVICE_ACCOUNT_FILE = 'service2.json'
 # SCOPES = ['https://www.googleapis.com/auth/drive']
-# FOLDER_ID = '1VqWZhF9mcDuB2bib-MDxzOFbcMIJTLbp'
+# FOLDER_ID = '18hGBZgSwRKVavF_VaoEcevgbHp7YTzib'
 
 # credentials = service_account.Credentials.from_service_account_file(
 #     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
@@ -76,79 +78,123 @@ drive_service = build_drive_service()
 storage_client = create_storage_client()
 
 # Function to upload a file to Google Drive
-def upload_to_drive(file_obj, file_name, folder_path="market-data/trash", max_retries=3):
- #To use the global drive_service instead of building it again
- global drive_service
- if not drive_service:
-     print("Drive service is not initialized.")
-     return
 
- try:
-     folder_names = folder_path.strip('/').split('/')
-     parent_id = None
+def upload_to_drive(file_obj, file_name, folder_path="market-data/trash", max_retries=3, overwrite=False):
+    
+    # To use the global drive_service instead of building it again
+    global drive_service
+    if not drive_service:
+        print("Drive service is not initialized.")
+        return
 
-     # Walk through the folder path and create missing folders
-     for folder_name in folder_names:
-         query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-         if parent_id:
-             query += f" and '{parent_id}' in parents"
+    try:
+        folder_names = folder_path.strip('/').split('/')
+        parent_id = None
 
-         response = drive_service.files().list(q=query, fields="files(id, name)").execute()
-         folders = response.get('files', [])
+        # Walk through the folder path and create missing folders
+        for folder_name in folder_names:
+            query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            if parent_id:
+                query += f" and '{parent_id}' in parents"
 
-         if folders:
-             parent_id = folders[0]['id']
-         else:
-             metadata = {
-                 'name': folder_name,
-                 'mimeType': 'application/vnd.google-apps.folder',
-                 'parents': [parent_id] if parent_id else []
-             }
-             folder = drive_service.files().create(body=metadata, fields='id').execute()
-             parent_id = folder.get('id')
+            response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+            folders = response.get('files', [])
 
-     # Save BytesIO to temp file
-     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
-         temp_file.write(file_obj.getvalue())
-         temp_path = temp_file.name
+            if folders:
+                parent_id = folders[0]['id']
+            else:
+                metadata = {
+                    'name': folder_name,
+                    'mimeType': 'application/vnd.google-apps.folder',
+                    'parents': [parent_id] if parent_id else []
+                }
+                folder = drive_service.files().create(body=metadata, fields='id').execute()
+                parent_id = folder.get('id')
 
-     # Prepare metadata and upload
-     file_metadata = {
-         'name': file_name,
-         'parents': [parent_id],
-     }
+        # Save BytesIO to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+            temp_file.write(file_obj.getvalue())
+            temp_path = temp_file.name
 
-     for attempt in range(max_retries):
-         try:
-             media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-             uploaded_file = drive_service.files().create(
-                 body=file_metadata,
-                 media_body=media,
-                 fields='id'
-             ).execute()
-             print(f"Uploaded to Google Drive folder")
-             return #Success!
+        # Prepare metadata (excluding parents)
+        file_metadata = {
+            'name': file_name,
+        }
 
-         except (BrokenPipeError, googleapiclient.errors.HttpError) as upload_error:
-             print(f"Upload failed at attempt {attempt+1}: {str(upload_error)}")
-             if attempt < max_retries -1:
-                 wait_time = (2 ** attempt) * 5 #Exponential Backoff
-                 print(f"Retrying in {wait_time} seconds...")
-                 time.sleep(wait_time)
-             else:
-                 print("Max retries reached. Upload failed.")
-                 raise # Re-raise exception to be handled upstream
-         except Exception as upload_error:
-             print(f"Upload failed at media upload step: {str(upload_error)}")
-             raise  # Re-raise the exception to be handled upstream
+        # Check if the file exists
+        query = f"name='{file_name}' and trashed=false"
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
 
- except Exception as e:
-     print(f"Error uploading: {str(e)}")
-     raise  # Re-raise the exception to be handled upstream
- finally:
-     #Clean up temp file
-     if 'temp_path' in locals() and os.path.exists(temp_path):
-         os.remove(temp_path)
+        response = drive_service.files().list(q=query, fields="files(id)").execute()
+        files = response.get('files', [])
+
+        if files:
+            file_id = files[0]['id']
+            if overwrite:
+                # Update existing file
+                for attempt in range(max_retries):
+                    try:
+                        media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+                        #Update operation - DO NOT set body if updating the media
+                        updated_file = drive_service.files().update(
+                            fileId=file_id,
+                            #body=file_metadata, #Remove this line
+                            media_body=media,
+                            addParents=parent_id # add the folder to parameters, replacing the body
+                        ).execute()
+                        print(f"Overwrote file {file_name} in Google Drive folder")
+                        return  # Success!
+                    except (BrokenPipeError, googleapiclient.errors.HttpError) as upload_error:
+                        print(f"Update failed at attempt {attempt + 1}: {str(upload_error)}")
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) * 5  # Exponential Backoff
+                            print(f"Retrying in {wait_time} seconds...")
+                            time.sleep(wait_time)
+                        else:
+                            print("Max retries reached. Update failed.")
+                            raise  # Re-raise exception to be handled upstream
+                    except Exception as upload_error:
+                        print(f"Upload failed at media upload step: {str(upload_error)}")
+                        raise  # Re-raise the exception to be handled upstream
+            else:
+                print(f"File {file_name} already exists. Use overwrite=True to replace.")
+                return  # Or raise an exception if you want to enforce overwriting
+        else:
+            # Create new file
+            file_metadata['parents']=[parent_id] #we are creating a new file, it is ok to send parents
+            for attempt in range(max_retries):
+                try:
+                    media = MediaFileUpload(temp_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    uploaded_file = drive_service.files().create(
+                        body=file_metadata,
+                        media_body=media,
+                        fields='id'
+                    ).execute()
+                    print(f"Uploaded to Google Drive folder")
+                    return  # Success!
+
+                except (BrokenPipeError, googleapiclient.errors.HttpError) as upload_error:
+                    print(f"Upload failed at attempt {attempt + 1}: {str(upload_error)}")
+                    if attempt < max_retries - 1:
+                        wait_time = (2 ** attempt) * 5  # Exponential Backoff
+                        print(f"Retrying in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        print("Max retries reached. Upload failed.")
+                        raise  # Re-raise exception to be handled upstream
+                except Exception as upload_error:
+                    print(f"Upload failed at media upload step: {str(upload_error)}")
+                    raise  # Re-raise the exception to be handled upstream
+
+    except Exception as e:
+        print(f"Error uploading: {str(e)}")
+        raise  # Re-raise the exception to be handled upstream
+    finally:
+        # Clean up temp file
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 # Function to upload a file to Google Cloud Storage
 def upload_to_gcs(file_content, gcs_path):
@@ -203,10 +249,32 @@ def scheduled_download_realtime_data():
 
             # Upload in Google Drive
             upload_to_drive(output, drive_filename, folder_path="market-data/scheduled/realtime")
-            
+
             # Upload to GCS
             upload_to_gcs(output, gcs_path)
-            
+
+            return f"Realtime data saved as {filename}"
+        else:
+            print("Failed to generate real-time data")
+    except Exception as e:
+        print(f"Error in scheduled task (Download Real-time Data): {str(e)}")
+
+@app.route('/run-scheduled-realtime-single', methods=['POST'])
+def scheduled_download_realtime_data_single():
+    try:
+        print("Running scheduled task: Download Real-time Data")
+        output = generate_realtime_data()
+        if output:
+            filename = f'{time.strftime("%d%m%Y")}-dates-{time.strftime("%d%m%Y")}.xlsx'
+            drive_filename = f'stocksdata-scheduled-realtime-single-{filename}'
+            gcs_path = GCS_SCHEDULED_REALTIME_SINGLE_DIR + filename
+
+            # Upload in Google Drive
+            upload_to_drive(output, drive_filename, folder_path="market-data/scheduled/realtime/single-file", overwrite=True)
+
+            # Upload to GCS
+            upload_to_gcs(output, gcs_path)
+
             return f"Realtime data saved as {filename}"
         else:
             print("Failed to generate real-time data")
@@ -469,7 +537,7 @@ def download_index_components():
         gcs_path = GCS_INDEX_COMPONENTS + filename
         
         # Upload in Google Drive
-        upload_to_drive(output, drive_filename, folder_path="market-data/index-components")
+        upload_to_drive(output, drive_filename, folder_path="market-data/templates/index-components")
         
         # Upload to GCS
         upload_to_gcs(output, gcs_path)
@@ -478,6 +546,26 @@ def download_index_components():
         return redirect('/')
     except Exception as e:
         flash(f"Error saving index components data: {str(e)}")
+        return redirect('/')
+
+@app.route('/download-default-template', methods=['POST'])
+def download_default_template():
+    try:
+        output = generate_ticker_template()
+        filename = f'default-template-{time.strftime("%d%m%Y")}.xlsx'
+        drive_filename = f'default-template-{filename}'
+        gcs_path = GCS_TEMPLATE + filename
+        
+        # Upload in Google Drive
+        upload_to_drive(output, drive_filename, folder_path="stocks-data/templates")
+        
+        # Upload to GCS
+        upload_to_gcs(output, gcs_path)
+        
+        flash("Template saved successfully.")
+        return redirect('/')
+    except Exception as e:
+        flash(f"Error saving template: {str(e)}")
         return redirect('/')
 
 if __name__ == '__main__':

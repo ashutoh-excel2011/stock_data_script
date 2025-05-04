@@ -9,12 +9,12 @@ def get_current_details(tickers):
     try:
         if not tickers:
             return pd.DataFrame()
-        
-        # end_date = datetime.now().date()
-        # start_date = end_date - timedelta(days=1)
-           
-        data = yf.download(tickers, period="1d", interval="60m", group_by="ticker", auto_adjust=False)
-       
+
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=3)
+
+        data = yf.download(tickers, start=start_date, end=end_date, interval="90m", group_by="ticker", auto_adjust=False)
+
         if data.empty:
             return pd.DataFrame()
 

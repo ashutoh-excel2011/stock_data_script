@@ -90,8 +90,8 @@ def generate_index_name():
     df.set_index('Ticker', inplace=True)
 
     index_columns = {
-        'Dow Jones': 'DowJones',
-        'Nasdaq 100': 'Nasdaq100',
+        'DowJones': 'DowJones',
+        'Nasdaq100': 'Nasdaq100',
         'SP500': 'SP500',
         'ETF': 'ETFs',
         'Other': 'Other'
@@ -103,8 +103,8 @@ def generate_index_name():
 
     def build_indices_row(row):
         tags = []
-        if row['Dow Jones']: tags.append('DJ')
-        if row['Nasdaq 100']: tags.append('ND')
+        if row['DowJones']: tags.append('DJ')
+        if row['Nasdaq100']: tags.append('ND')
         if row['SP500']: tags.append('SP')
         if row['ETF']: tags.append('ETF')
         if row['Other']: tags.append('Other')
@@ -114,7 +114,7 @@ def generate_index_name():
     df['Company Name'] = df.index.map(lambda ticker: ticker_to_name.get(ticker, ''))
 
     df.reset_index(inplace=True)
-    df = df[['Ticker', 'Company Name', 'Dow Jones', 'Nasdaq 100', 'SP500', 'ETF', 'Other', 'Indices']]
+    df = df[['Ticker', 'Company Name', 'DowJones', 'Nasdaq100', 'SP500', 'ETF', 'Other', 'Indices']]
 
     # Save to in-memory Excel file
     output = BytesIO()
