@@ -679,7 +679,7 @@ def download():
 
         gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename if export_format == 'single' else GCS_MANUAL_HISTORIC_DIR_MULTI + filename
 
-        # upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
+        upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
         upload_to_gcs(output, gcs_path)
 
         return jsonify({'status': 'success', 'message': 'File successfully saved.'}), 200
