@@ -53,7 +53,7 @@
         <div class="card mb-4 mt-4">
             <div class="card-header"><h4>Historic Data</h4></div>
             <div class="card-body">
-                <form method="POST" action="/download" enctype="multipart/form-data">
+                <form id="download_form" enctype="multipart/form-data">
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="use_uploaded_file" name="use_uploaded_file">
                         <label class="form-check-label" for="use_uploaded_file">
@@ -118,9 +118,16 @@
                         </div>
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Download Stock Data</button>
+                        <button type="submit" id="download_btn" class="btn btn-primary">Download Stock Data</button>
                     </div>
                 </form>
+                <div id="download_progress" class="progress mt-3" style="height: 25px; display: none;">
+                    <div id="download_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                         role="progressbar" style="width: 100%">
+                        Downloading...
+                    </div>
+                </div>
+                <div id="download_alert" class="alert d-none mt-3" role="alert"></div>
             </div>
         </div>
         <div class="card mb-4 mt-4">
@@ -148,22 +155,31 @@
         <div class="card mb-4">
             <div class="card-header"><h4>Realtime Data</h4></div>
             <div class="card-body">
-                <form action="{{ url_for('download_realtime_data') }}" method="post" enctype="multipart/form-data">
+                <form id="realtime_form" enctype="multipart/form-data">
                     <div class="form-group mb-3">
-                        <label for="realtime_file" class="form-label"><strong>Upload Selected Tickers (Optional)</strong></label>
-                        <input class="form-control" type="file" id="realtime_file" name="file" accept=".xlsx,.xls" required>
+                        <label for="realtime_file" class="form-label"><strong>Upload Tickers for Realtime Data (Optional)</strong>:</label>
+                        <input class="form-control" type="file" id="realtime_file" name="file" accept=".xlsx,.xls">
                     </div>
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Download Selected Tickers Data</button>
-                        <a href="{{ url_for('download_realtime_data') }}" class="btn btn-secondary">Download All Tickers data</a>
+                        <button type="submit" id="realtime_submit_btn" class="btn btn-primary">Download Selected Realtime Tickers Data</button>
+                        <button type="button" id="realtime_all_btn" class="btn btn-secondary">Download All Realtime Tickers Data</button>
                     </div>
                 </form>
-            </div>
+            
+                <div id="realtime_progress" class="progress mt-3" style="height: 25px; display: none;">
+                    <div id="realtime_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                         role="progressbar" style="width: 100%">
+                      Downloading...
+                    </div>
+                </div>
+                
+                <div id="realtime_alert" class="alert d-none mt-3" role="alert"></div>
+            </div>            
         </div>
         <div class="card mb-4">
             <div class="card-header"><h4>Specific Date</h4></div>
             <div class="card-body">
-                <form action="{{ url_for('download_specific_date') }}" method="post" enctype="multipart/form-data">
+                <form id="specific_date_form" enctype="multipart/form-data">
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="use_selected_tickers" name="use_selected_tickers">
                         <label class="form-check-label" for="use_selected_tickers">
@@ -178,11 +194,18 @@
                         <label for="specific_date" class="form-label"><strong>Select Date:</strong></label>
                         <input type="date" class="form-control" id="specific_date" name="specific_date" required>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Download Stock Data</button>
+                    <div class="d-grid gap-2">
+                        <button type="submit" id="specific_date_btn" class="btn btn-primary">Download Stock Data</button>
                     </div>
                 </form>
-            </div>
+                <div id="specific_date_progress" class="progress mt-3" style="height: 25px; display: none;">
+                    <div id="specific_date_progress_bar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                         role="progressbar" style="width: 100%">
+                      Downloading...
+                    </div>
+                </div>
+                <div id="specific_date_alert" class="alert d-none mt-3" role="alert"></div>
+            </div>            
         </div>
     </div>
 
@@ -289,6 +312,174 @@
                 hideProgressBar();
                 btn.disabled = false;
                 btn.innerText = 'Download All Tickers Data';
+            });
+        });
+    </script>
+    <script>
+        function showRealtimeProgress() {
+            document.getElementById('realtime_progress').style.display = 'block';
+        }
+    
+        function hideRealtimeProgress() {
+            document.getElementById('realtime_progress').style.display = 'none';
+        }
+    
+        function showRealtimeAlert(message, type = 'success') {
+            const alertBox = document.getElementById('realtime_alert');
+            alertBox.className = `alert alert-${type} mt-3`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('d-none');
+    
+            setTimeout(() => {
+                alertBox.classList.add('d-none');
+            }, 5000);
+        }
+    
+        document.getElementById('realtime_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+    
+            const formData = new FormData(this);
+            const btn = document.getElementById('realtime_submit_btn');
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+    
+            showRealtimeProgress();
+    
+            fetch('/download_realtime_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const result = await response.json();
+                showRealtimeAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showRealtimeAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideRealtimeProgress();
+                btn.disabled = false;
+                btn.innerText = 'Download Selected Realtime Tickers Data';
+            });
+        });
+    
+        document.getElementById('realtime_all_btn').addEventListener('click', function () {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+    
+            showRealtimeProgress();
+    
+            fetch('/download_realtime_data', {
+                method: 'POST'
+            })
+            .then(async response => {
+                const result = await response.json();
+                showRealtimeAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showRealtimeAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideRealtimeProgress();
+                btn.disabled = false;
+                btn.innerText = 'Download All Realtime Tickers Data';
+            });
+        });
+    </script>
+    <script>
+        function showSpecificDateProgress() {
+            document.getElementById('specific_date_progress').style.display = 'block';
+        }
+    
+        function hideSpecificDateProgress() {
+            document.getElementById('specific_date_progress').style.display = 'none';
+        }
+    
+        function showSpecificDateAlert(message, type = 'success') {
+            const alertBox = document.getElementById('specific_date_alert');
+            alertBox.className = `alert alert-${type} mt-3`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('d-none');
+    
+            setTimeout(() => {
+                alertBox.classList.add('d-none');
+            }, 5000);
+        }
+    
+        document.getElementById('specific_date_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+    
+            const formData = new FormData(this);
+            const btn = document.getElementById('specific_date_btn');
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+    
+            showSpecificDateProgress();
+    
+            fetch('/download_specific_date', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const result = await response.json();
+                showSpecificDateAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showSpecificDateAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideSpecificDateProgress();
+                btn.disabled = false;
+                btn.innerText = 'Download Stock Data';
+            });
+        });
+    </script>
+    <script>
+        function showDownloadProgress() {
+            document.getElementById('download_progress').style.display = 'block';
+        }
+    
+        function hideDownloadProgress() {
+            document.getElementById('download_progress').style.display = 'none';
+        }
+    
+        function showDownloadAlert(message, type = 'success') {
+            const alertBox = document.getElementById('download_alert');
+            alertBox.className = `alert alert-${type} mt-3`;
+            alertBox.textContent = message;
+            alertBox.classList.remove('d-none');
+    
+            setTimeout(() => {
+                alertBox.classList.add('d-none');
+            }, 5000);
+        }
+    
+        document.getElementById('download_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+    
+            const formData = new FormData(this);
+            const btn = document.getElementById('download_btn');
+            btn.disabled = true;
+            btn.innerText = 'Processing...';
+    
+            showDownloadProgress();
+    
+            fetch('/download', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const result = await response.json();
+                showDownloadAlert(result.message, response.ok ? 'success' : 'danger');
+            })
+            .catch(err => {
+                showDownloadAlert('Error: ' + err.message, 'danger');
+            })
+            .finally(() => {
+                hideDownloadProgress();
+                btn.disabled = false;
+                btn.innerText = 'Download Stock Data';
             });
         });
     </script>                 

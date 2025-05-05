@@ -286,7 +286,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/download_all_data', methods=['POST'])
-def api_download_all_data():
+def download_all_data():
     try:
         index_ticker_map = {}
 
@@ -323,21 +323,64 @@ def api_download_all_data():
     except Exception as e:
         return jsonify({'status': 'error', 'message': f"Error: {str(e)}"}), 500
     
-@app.route('/download_realtime_data', methods=['GET', 'POST'])
-def download_realtime_data():
+# @app.route('/download_realtime_data', methods=['GET', 'POST'])
+# def download_realtime_data():
+#     try:
+#         index_ticker_map = {}
+#         # Check if a file was uploaded
+#         if request.method == 'POST' and 'file' in request.files:
+#             uploaded_file = request.files['file']
+            
+#             if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+#                 # Read tickers from uploaded file
+#                 df_tickers = pd.read_excel(uploaded_file)
+#                 if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+#                     flash("Excel file must contain 'Ticker' and 'Index' columns")
+#                     return redirect('/')
+                    
+#                 for index, ticker in df_tickers.groupby('Index'):
+#                     index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+#                 output = generate_realtime_data(tickers=index_ticker_map)
+#             else:
+#                 output = generate_realtime_data()
+#         else:
+#             output = generate_realtime_data()
+
+#         if output:
+#             filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
+#             drive_filename = f'stocksdata-manual-realtime-{filename}'
+#             gcs_path = GCS_MANUAL_REALTIME_DIR + filename
+            
+#             # Upload in Google Drive
+#             upload_to_drive(output, drive_filename, folder_path="market-data/manual/realtime")
+            
+#             # Upload to GCS
+#             upload_to_gcs(output, gcs_path)
+        
+#             # Flash a success message and redirect to the desired page
+#             flash(f"Realtime data saved successfully.")
+#             return redirect('/')
+        
+#         flash("Failed to generate realtime data")
+#         return redirect('/')
+#     except Exception as e:
+#         flash(f"Error generating realtime data: {str(e)}")
+#         return redirect('/')
+
+@app.route('/download_realtime_data', methods=['POST'])
+def api_download_realtime_data():
     try:
         index_ticker_map = {}
-        # Check if a file was uploaded
-        if request.method == 'POST' and 'file' in request.files:
+
+        # Handle file upload via AJAX
+        if 'file' in request.files:
             uploaded_file = request.files['file']
-            
+
             if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
-                # Read tickers from uploaded file
                 df_tickers = pd.read_excel(uploaded_file)
                 if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
-                    flash("Excel file must contain 'Ticker' and 'Index' columns")
-                    return redirect('/')
-                    
+                    return jsonify({'status': 'error', 'message': "Excel file must contain 'Ticker' and 'Index' columns"}), 400
+
                 for index, ticker in df_tickers.groupby('Index'):
                     index_ticker_map[index] = ticker['Ticker'].unique().tolist()
                 output = generate_realtime_data(tickers=index_ticker_map)
@@ -350,178 +393,301 @@ def download_realtime_data():
             filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{time.strftime("%d%m%Y")}.xlsx'
             drive_filename = f'stocksdata-manual-realtime-{filename}'
             gcs_path = GCS_MANUAL_REALTIME_DIR + filename
-            
+
             # Upload in Google Drive
             upload_to_drive(output, drive_filename, folder_path="market-data/manual/realtime")
-            
-            # Upload to GCS
             upload_to_gcs(output, gcs_path)
-        
-            # Flash a success message and redirect to the desired page
-            flash(f"Realtime data saved successfully.")
-            return redirect('/')
-        
-        flash("Failed to generate realtime data")
-        return redirect('/')
+
+            return jsonify({'status': 'success', 'message': 'Realtime data saved successfully.'}), 200
+
+        return jsonify({'status': 'error', 'message': 'Failed to generate realtime data'}), 500
     except Exception as e:
-        flash(f"Error generating realtime data: {str(e)}")
-        return redirect('/')
+        return jsonify({'status': 'error', 'message': f"Error: {str(e)}"}), 500
     
-@app.route('/download_specific_date', methods=['GET', 'POST'])
+# @app.route('/download_specific_date', methods=['GET', 'POST'])
+# def download_specific_date():
+#     try:
+#         index_ticker_map = {}
+#         # Check if it's a POST request
+#         if request.method == 'POST' and 'specific_date' in request.form:
+            
+#             specific_date = request.form['specific_date']
+
+#             # Check if file was uploaded
+#             if 'file' in request.files:
+#                 uploaded_file = request.files['file']
+#                 if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+#                     # Read tickers from uploaded file
+#                     df_tickers = pd.read_excel(uploaded_file)
+#                     if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+#                         flash("Excel file must contain 'Ticker' and 'Index' columns")
+#                         return redirect('/')
+                        
+#                     for index, ticker in df_tickers.groupby('Index'):
+#                         index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+                    
+#                     output = generate_specific_date_data(specific_date, tickers=index_ticker_map)
+#                 else:
+#                     output = generate_specific_date_data(specific_date)
+#             else:
+#                 output = generate_specific_date_data(specific_date)
+
+#             if output:
+#                 # Generate filename and save file
+#                 filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{specific_date}.xlsx'
+#                 drive_filename = f'stocksdata-manual-historic-specific-date-{filename}'
+#                 gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
+
+#                 # Upload in Google Drive
+#                 upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/specific-date")
+            
+#                 # Upload to GCS
+#                 upload_to_gcs(output, gcs_path)
+                
+                
+#                 flash("Data saved successfully.")
+#                 return redirect('/')
+#             else:
+#                 flash("Failed to generate data for the specific date")
+#                 return redirect('/')
+#         else:
+#             flash("Please submit the form with a valid date")
+#             return redirect('/')
+            
+#     except Exception as e:
+#         flash(f"Error processing request: {str(e)}")
+#         return redirect('/')
+
+@app.route('/download_specific_date', methods=['POST'])
 def download_specific_date():
     try:
-        index_ticker_map = {}
-        # Check if it's a POST request
-        if request.method == 'POST' and 'specific_date' in request.form:
-            
-            specific_date = request.form['specific_date']
+        if 'specific_date' not in request.form:
+            return jsonify({'status': 'error', 'message': 'Please provide a valid date'}), 400
 
-            # Check if file was uploaded
-            if 'file' in request.files:
-                uploaded_file = request.files['file']
-                if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
-                    # Read tickers from uploaded file
-                    df_tickers = pd.read_excel(uploaded_file)
-                    if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
-                        flash("Excel file must contain 'Ticker' and 'Index' columns")
-                        return redirect('/')
-                        
-                    for index, ticker in df_tickers.groupby('Index'):
-                        index_ticker_map[index] = ticker['Ticker'].unique().tolist()
-                    
-                    output = generate_specific_date_data(specific_date, tickers=index_ticker_map)
-                else:
-                    output = generate_specific_date_data(specific_date)
+        specific_date = request.form['specific_date']
+        index_ticker_map = {}
+
+        if 'file' in request.files:
+            uploaded_file = request.files['file']
+            if uploaded_file.filename != '' and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+                df_tickers = pd.read_excel(uploaded_file)
+                if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+                    return jsonify({'status': 'error', 'message': "Excel must have 'Ticker' and 'Index'"}), 400
+
+                for index, ticker in df_tickers.groupby('Index'):
+                    index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+                output = generate_specific_date_data(specific_date, tickers=index_ticker_map)
             else:
                 output = generate_specific_date_data(specific_date)
-
-            if output:
-                # Generate filename and save file
-                filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{specific_date}.xlsx'
-                drive_filename = f'stocksdata-manual-historic-specific-date-{filename}'
-                gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
-
-                # Upload in Google Drive
-                upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/specific-date")
-            
-                # Upload to GCS
-                upload_to_gcs(output, gcs_path)
-                
-                
-                flash("Data saved successfully.")
-                return redirect('/')
-            else:
-                flash("Failed to generate data for the specific date")
-                return redirect('/')
         else:
-            flash("Please submit the form with a valid date")
-            return redirect('/')
-            
+            output = generate_specific_date_data(specific_date)
+
+        if output:
+            filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{specific_date}.xlsx'
+            drive_filename = f'stocksdata-manual-historic-specific-date-{filename}'
+            gcs_path = GCS_MANUAL_HISTORIC_DIR_SPECIFIC + filename
+
+            upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/specific-date")
+            upload_to_gcs(output, gcs_path)
+
+            return jsonify({'status': 'success', 'message': 'Data saved successfully.'}), 200
+
+        return jsonify({'status': 'error', 'message': 'Failed to generate data for the specific date'}), 500
+
     except Exception as e:
-        flash(f"Error processing request: {str(e)}")
-        return redirect('/')
+        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'}), 500
+
+# @app.route('/download', methods=['POST'])
+# def download():
+#     try:
+#         index_ticker_map = {}
+#         period_type = request.form['period_type']
+#         export_format = request.form['export_format']
+        
+#         if 'file' in request.files:
+#             uploaded_file = request.files['file']
+            
+#             if uploaded_file and uploaded_file.filename.endswith(('.xlsx', '.xls')):
+#                 df_tickers = pd.read_excel(uploaded_file)
+#                 if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
+#                     flash("Excel file must contain 'Ticker' and 'Index' columns")
+#                     return redirect('/')
+                
+#                 for index, ticker in df_tickers.groupby('Index'):
+#                     index_ticker_map[index] = ticker['Ticker'].unique().tolist()
+#             elif uploaded_file.filename != '':
+#                 flash('Invalid file format. Please upload an Excel file.')
+#                 return redirect('/')
+
+#          # Handle date range, weeks, or days input
+#         if period_type == 'date':
+#             start_date = request.form['start_date']
+#             end_date = request.form['end_date']
+            
+#             # Validate dates
+#             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+#             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+#             if start_date_obj >= end_date_obj:
+#                 flash('End date must be after start date')
+#                 return redirect('/')
+#         elif period_type == 'weeks':
+#             weeks = int(request.form['weeks'])
+#             if weeks <= 0:
+#                 flash('Weeks must be a positive number')
+#                 return redirect('/')
+            
+#             end_date_obj = datetime.now()
+#             start_date_obj = end_date_obj - timedelta(weeks=weeks)
+#             start_date = start_date_obj.strftime('%Y-%m-%d')
+#             end_date = end_date_obj.strftime('%Y-%m-%d')
+#         else:  # period_type == 'days'
+#             days = int(request.form['days'])
+#             if days <= 0:
+#                 flash('Days must be a positive number')
+#                 return redirect('/')
+            
+#             end_date_obj = datetime.now()
+#             start_date_obj = end_date_obj - timedelta(days=days)
+#             start_date = start_date_obj.strftime('%Y-%m-%d')
+#             end_date = end_date_obj.strftime('%Y-%m-%d')
+
+
+#         # Create Excel file in memory
+#         output = BytesIO()
+#         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+#             if index_ticker_map:
+#                 if export_format == 'single':
+#                     sheet_type = 'singlesheet'
+                    
+#                     output = generate_historic_data(start_date, end_date, tickers=index_ticker_map)
+#                 else:
+#                     # Multiple sheets - one per ticker
+#                     sheet_type = 'multisheet'
+#                     output = generate_historic_data(start_date, end_date, tickers=index_ticker_map, multisheet=True)
+#             else:
+#                 if export_format == 'single':
+#                     sheet_type = 'singlesheet'
+#                     output = generate_historic_data(start_date, end_date)
+#                 else:
+#                     sheet_type = 'multisheet'
+#                     output = generate_historic_data(start_date, end_date, tickers=None, multisheet=True)                 
+
+#         output.seek(0)
+#         filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
+#         drive_filename = f'stocksdata-manual-historic-{sheet_type}-{filename}'
+        
+#         # Set GCS path based on export format
+#         if export_format == 'single':
+#             gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename
+#         else:
+#             gcs_path = GCS_MANUAL_HISTORIC_DIR_MULTI + filename
+        
+#         # Upload in Google Drive
+#         upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
+    
+#         # Upload to GCS
+#         upload_to_gcs(output, gcs_path)
+        
+#         # Flash success message and redirect
+#         flash(f"File successfully saved.")
+#         return redirect('/')
+
+#     except ValueError as ve:
+#         flash('Invalid input format. Please check your inputs.')
+#         return redirect('/')
+#     except Exception as e:
+#         flash(f'Error processing request: {str(e)}')
+#         return redirect('/')
 
 @app.route('/download', methods=['POST'])
 def download():
     try:
         index_ticker_map = {}
-        period_type = request.form['period_type']
-        export_format = request.form['export_format']
-        
+        period_type = request.form.get('period_type')
+        export_format = request.form.get('export_format')
+
+        if not period_type or not export_format:
+            return jsonify({'status': 'error', 'message': 'Missing period type or export format'}), 400
+
         if 'file' in request.files:
             uploaded_file = request.files['file']
-            
+
             if uploaded_file and uploaded_file.filename.endswith(('.xlsx', '.xls')):
                 df_tickers = pd.read_excel(uploaded_file)
                 if 'Ticker' not in df_tickers.columns or 'Index' not in df_tickers.columns:
-                    flash("Excel file must contain 'Ticker' and 'Index' columns")
-                    return redirect('/')
-                
+                    return jsonify({'status': 'error', 'message': "Excel file must contain 'Ticker' and 'Index' columns"}), 400
+
                 for index, ticker in df_tickers.groupby('Index'):
                     index_ticker_map[index] = ticker['Ticker'].unique().tolist()
             elif uploaded_file.filename != '':
-                flash('Invalid file format. Please upload an Excel file.')
-                return redirect('/')
+                return jsonify({'status': 'error', 'message': 'Invalid file format. Please upload an Excel file.'}), 400
 
-         # Handle date range, weeks, or days input
+        # Handle periods
         if period_type == 'date':
-            start_date = request.form['start_date']
-            end_date = request.form['end_date']
-            
-            # Validate dates
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+
+            if not start_date or not end_date:
+                return jsonify({'status': 'error', 'message': 'Both start and end dates are required'}), 400
+
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
             if start_date_obj >= end_date_obj:
-                flash('End date must be after start date')
-                return redirect('/')
+                return jsonify({'status': 'error', 'message': 'End date must be after start date'}), 400
+
         elif period_type == 'weeks':
-            weeks = int(request.form['weeks'])
+            weeks = int(request.form.get('weeks', 0))
             if weeks <= 0:
-                flash('Weeks must be a positive number')
-                return redirect('/')
-            
+                return jsonify({'status': 'error', 'message': 'Weeks must be a positive number'}), 400
+
             end_date_obj = datetime.now()
             start_date_obj = end_date_obj - timedelta(weeks=weeks)
-            start_date = start_date_obj.strftime('%Y-%m-%d')
-            end_date = end_date_obj.strftime('%Y-%m-%d')
-        else:  # period_type == 'days'
-            days = int(request.form['days'])
+
+        elif period_type == 'days':
+            days = int(request.form.get('days', 0))
             if days <= 0:
-                flash('Days must be a positive number')
-                return redirect('/')
-            
+                return jsonify({'status': 'error', 'message': 'Days must be a positive number'}), 400
+
             end_date_obj = datetime.now()
             start_date_obj = end_date_obj - timedelta(days=days)
-            start_date = start_date_obj.strftime('%Y-%m-%d')
-            end_date = end_date_obj.strftime('%Y-%m-%d')
 
+        else:
+            return jsonify({'status': 'error', 'message': 'Invalid period type'}), 400
 
-        # Create Excel file in memory
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            if index_ticker_map:
-                if export_format == 'single':
-                    sheet_type = 'singlesheet'
-                    
-                    output = generate_historic_data(start_date, end_date, tickers=index_ticker_map)
-                else:
-                    # Multiple sheets - one per ticker
-                    sheet_type = 'multisheet'
-                    output = generate_historic_data(start_date, end_date, tickers=index_ticker_map, multisheet=True)
+        start_date = start_date_obj.strftime('%Y-%m-%d')
+        end_date = end_date_obj.strftime('%Y-%m-%d')
+
+        # Generate data
+        if index_ticker_map:
+            if export_format == 'single':
+                sheet_type = 'singlesheet'
+                output = generate_historic_data(start_date, end_date, tickers=index_ticker_map)
             else:
-                if export_format == 'single':
-                    sheet_type = 'singlesheet'
-                    output = generate_historic_data(start_date, end_date)
-                else:
-                    sheet_type = 'multisheet'
-                    output = generate_historic_data(start_date, end_date, tickers=None, multisheet=True)                 
+                sheet_type = 'multisheet'
+                output = generate_historic_data(start_date, end_date, tickers=index_ticker_map, multisheet=True)
+        else:
+            if export_format == 'single':
+                sheet_type = 'singlesheet'
+                output = generate_historic_data(start_date, end_date)
+            else:
+                sheet_type = 'multisheet'
+                output = generate_historic_data(start_date, end_date, multisheet=True)
 
         output.seek(0)
         filename = f'{time.strftime("%d%m%Y-%H%M%S")}-dates-{start_date.replace("-", "")}-{end_date.replace("-", "")}.xlsx'
         drive_filename = f'stocksdata-manual-historic-{sheet_type}-{filename}'
-        
-        # Set GCS path based on export format
-        if export_format == 'single':
-            gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename
-        else:
-            gcs_path = GCS_MANUAL_HISTORIC_DIR_MULTI + filename
-        
-        # Upload in Google Drive
-        upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
-    
-        # Upload to GCS
-        upload_to_gcs(output, gcs_path)
-        
-        # Flash success message and redirect
-        flash(f"File successfully saved.")
-        return redirect('/')
 
-    except ValueError as ve:
-        flash('Invalid input format. Please check your inputs.')
-        return redirect('/')
+        gcs_path = GCS_MANUAL_HISTORIC_DIR_SINGLE + filename if export_format == 'single' else GCS_MANUAL_HISTORIC_DIR_MULTI + filename
+
+        # upload_to_drive(output, drive_filename, folder_path="market-data/manual/historic/single-sheet" if export_format == 'single' else "market-data/manual/historic/multiple-sheets")
+        upload_to_gcs(output, gcs_path)
+
+        return jsonify({'status': 'success', 'message': 'File successfully saved.'}), 200
+
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid input format. Please check your inputs.'}), 400
     except Exception as e:
-        flash(f'Error processing request: {str(e)}')
-        return redirect('/')
+        return jsonify({'status': 'error', 'message': f'Error processing request: {str(e)}'}), 500
 
 @app.route('/download-index-components', methods=['POST'])
 def download_index_components():
