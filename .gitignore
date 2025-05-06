@@ -48,3 +48,4 @@ venv*/
 *.env
 *.env.local
 backend/service.json
+backend/service2.json

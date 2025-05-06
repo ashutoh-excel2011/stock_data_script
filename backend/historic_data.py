@@ -30,6 +30,7 @@ def get_current_details(ticker, start_date, end_date):
 
         # Drop the Volume column
         df = df.drop(columns=['Volume'])
+        df = df.dropna(subset=['Open', 'High', 'Low', 'Close', 'Adj Close'])
         
         return df
                 
@@ -38,7 +39,6 @@ def get_current_details(ticker, start_date, end_date):
         return None
     
 def generate_historic_data(start_date, end_date, tickers=None, multisheet=None):
-    """Generate Excel file with specific date data in a single sheet"""
     try:
         output = BytesIO()
         all_data = pd.DataFrame()

@@ -729,6 +729,175 @@ def download_default_template():
         flash(f"Error saving template: {str(e)}")
         return redirect('/')
 
+def delete_old_drive_files():
+
+    global drive_service 
+
+    if not drive_service:
+        print("Drive service is not initialized.")
+        return
+
+    folder_path="market-data/scheduled/realtime"
+    days_old=3
+    max_retries=3
+    exclude_subfolder="single-file"
+    
+    try:
+        # Find the folder ID
+        folder_names = folder_path.strip('/').split('/')
+        parent_id = None
+
+        for i, folder_name in enumerate(folder_names):
+            query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            if parent_id:
+                query += f" and '{parent_id}' in parents"
+
+            response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+            folders = response.get('files', [])
+
+            if folders:
+                parent_id = folders[0]['id']
+            else:
+                print(f"Folder '{folder_name}' not found in Google Drive path '{folder_path}'.")
+                return  # Stop if the folder is not found
+        # Construct the exclusion path
+        exclusion_path = folder_path + "/" + exclude_subfolder
+
+        if not parent_id:
+            print(f"Base folder not found in Google Drive path '{folder_path}'.")
+            return  # Stop if the base folder isn't found
+
+        # Calculate the date threshold
+        date_threshold = datetime.utcnow() - timedelta(days=days_old)
+        date_threshold_str = date_threshold.isoformat() + 'Z'  # Format for Google Drive API
+
+        # List files in the folder that are older than the threshold
+        query = f"'{parent_id}' in parents and trashed=false and modifiedTime < '{date_threshold_str}'"
+        results = drive_service.files().list(
+            q=query, fields="files(id, name, modifiedTime)", pageSize=1000).execute() #Increased Page size
+        files = results.get('files', [])
+
+        if not files:
+            print(f"No files older than {days_old} days found in Google Drive folder '{folder_path}'.")
+            return
+
+        print(f"Found {len(files)} files to delete.")
+
+        # Delete the files
+        for file in files:
+            file_id = file['id']
+            file_name = file['name']
+            modified_time = file['modifiedTime']
+            file_parents_query = drive_service.files().get(fileId=file_id, fields='parents').execute()
+            file_parents = file_parents_query.get('parents', [])
+            if not file_parents:
+                print(f"Skipping file '{file_name}' because it has no parents.")
+                continue  # Skip files with no parents
+
+            # Determine the full path of the file by traversing up the folder hierarchy
+            file_path = ""
+            current_parent_id = parent_id
+            while current_parent_id:
+                # Fetch parent folder details
+                parent_query = drive_service.files().get(fileId=current_parent_id, fields='name, parents').execute()
+                parent_name = parent_query.get('name', '')
+                parent_parents = parent_query.get('parents', [])
+                if file_path:
+                  file_path = parent_name+ "/" + file_path
+                else:
+                  file_path = parent_name
+
+                # Move up to the next parent
+                current_parent_id = parent_parents[0] if parent_parents else None
+                # Add the top folder
+                file_path = folder_path + "/" + file_name
+           # Check if the file is in the excluded subfolder
+
+            if exclude_subfolder in file_path:
+                print(f"Skipping file '{file_name}' because it's in the excluded subfolder '{exclude_subfolder}'.")
+                continue #Skip that deletion
+
+            for attempt in range(max_retries):
+                try:
+                    drive_service.files().delete(fileId=file_id).execute()
+                    print(f"Deleted file '{file_name}' (ID: {file_id}), modified {modified_time}")
+                    break  # If successful, break out of the retry loop
+                except googleapiclient.errors.HttpError as delete_error:
+                    print(f"Delete failed at attempt {attempt + 1}: {str(delete_error)}")
+                    if attempt < max_retries - 1:
+                        wait_time = (2 ** attempt) * 5  # Exponential Backoff
+                        print(f"Retrying in {wait_time} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"Max retries reached. Deletion of '{file_name}' failed.")
+                        # Consider logging this failure or raising an exception
+                except Exception as e:
+                    print(f"An unexpected error occurred during deletion of '{file_name}': {str(e)}")
+                    break #if unexpected error just stop trying
+            else:
+                print(f"Max retries reached for deleting file '{file_name}'.  Skipping...")
+
+    except Exception as e:
+        print(f"Error deleting files: {str(e)}")
+
+@app.route('/delete_old_realtime_files', methods=['POST'])
+def delete_old_realtime_files():
+    try:
+
+        delete_old_drive_files()
+
+        return jsonify({'status': 'success', 'message': f'Files deleted successfully'}), 200
+
+    except Exception as e:
+        print(f"Error in /delete_old_realtime_files route: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'Error during deletion: {str(e)}'}), 500    
+
+
+def delete_old_gcs_files(bucket_name, folder_path, days_old=3, exclude_subfolder="single-file"):
+
+    try:
+        bucket = storage_client.bucket(bucket_name)
+        blobs = bucket.list_blobs(prefix=folder_path)
+
+        date_threshold = datetime.now() - timedelta(days=days_old)
+
+        for blob in blobs:
+            # Extract the relative path
+            file_path_parts = blob.name.split('/')
+            is_excluded = False
+            for part in file_path_parts:
+              if exclude_subfolder in part:
+                is_excluded = True
+            file_path_parts = blob.name.replace(folder_path,'')
+            if not blob.name.endswith('/'):
+                file_created = blob.time_created.replace(tzinfo=None)
+                if file_created < date_threshold and not is_excluded:
+                    print(f"Deleting file: {blob.name}")
+                    blob.delete()
+                    print(f"File {blob.name} deleted successfully.")
+                elif is_excluded:
+                  print(f"Skipping file {blob.name} because it's in folder  {exclude_subfolder}")
+                elif file_created > date_threshold:
+                    print(f"Skipping file {blob.name} created within the last 3 days")
+        print("GCS cleanup process complete.")
+    except Exception as e:
+        print(f"Error deleting files from GCS: {str(e)}")
+
+@app.route('/delete_old_files_gcs', methods=['POST'])
+def api_delete_old_realtime_files_gcs():
+    try:
+        bucket_name = GCS_BUCKET_NAME
+        folder_path = "market-data/scheduled/realtime"
+        exclude_subfolder = "single-file"
+
+        delete_old_gcs_files(bucket_name=bucket_name, folder_path=folder_path, exclude_subfolder=exclude_subfolder)
+
+        return jsonify({'status': 'success', 'message': f'Files deleted successfully'}), 200
+
+    except Exception as e:
+        print(f"Error in /delete_old_files_gcs route: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'Error during deletion from GCS: {str(e)}'}), 500
+    
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 80))
     app.run(host='0.0.0.0', port=port, debug=True)
